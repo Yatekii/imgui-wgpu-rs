@@ -9,7 +9,7 @@ let imgui: imgui::ImGui = ..;
 let format = wgpu::TextureFormat::Bgra8Unorm;
 let clear_color = wgpu::Color { r: 0.1, g: 0.2, b: 0.3, a: 1.0 };
 
-let mut renderer = Renderer::init(&mut imgui, &mut device, format, clear_color)
+let mut renderer = Renderer::init(&mut imgui, &mut device, format, Some(clear_color))
   .expect("Failed to initialize renderer");
 ```
 
