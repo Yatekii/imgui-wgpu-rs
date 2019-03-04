@@ -18,13 +18,11 @@ let mut renderer = Renderer::new(&mut imgui, &mut device, format, Some(clear_col
 let device: wgpu::Device = ..;
 let imgui: imgui::ImGui = ..;
 let swap_chain: wgpu::SwapChain = ..;
+let mut encoder: wgpu::CommandEncoder = ..;
 
 let ui = imgui.frame(..);
 
 let frame = swap_chain.get_next_texture();
-
-let mut encoder: wgpu::CommandEncoder = device.create_command_encoder(
-  &wgpu::CommandEncoderDescriptor { todo: 0 });
 
 renderer
   .render(ui, &mut device, &mut encoder, &frame.view)
