@@ -3,7 +3,7 @@
 Draw dear imgui UIs as a wgpu render pass. Based on imgui-gfx-renderer.
 
 #### Initialize
-```rs
+```rust
 let device: wgpu::Device = ..;
 let imgui: imgui::ImGui = ..;
 let format = wgpu::TextureFormat::Bgra8Unorm;
@@ -14,7 +14,7 @@ let mut renderer = Renderer::init(&mut imgui, &mut device, format, clear_color)
 ```
 
 #### Render
-```rs
+```rust
 let device: wgpu::Device = ..;
 let imgui: imgui::ImGui = ..;
 let swap_chain: wgpu::SwapChain = ..;
