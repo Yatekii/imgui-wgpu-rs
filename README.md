@@ -27,7 +27,7 @@ let mut encoder: wgpu::CommandEncoder = device.create_command_encoder(
   &wgpu::CommandEncoderDescriptor { todo: 0 });
 
 renderer
-  .render(ui, &mut device, &mut encoder, &frame)
+  .render(ui, &mut device, &mut encoder, &frame.view)
   .expect("Rendering failed");
 ```
 
