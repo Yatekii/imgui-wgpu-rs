@@ -244,7 +244,7 @@ impl Renderer {
       usage: wgpu::BufferUsageFlags::VERTEX | wgpu::BufferUsageFlags::TRANSFER_DST,
     });
 
-    let index_max = 16384;
+    let index_max = 32768;
     let index_size = size_of::<u16>() as u32;
     let index_buffer = device.create_buffer(&wgpu::BufferDescriptor {
       size: vertex_max * index_size,

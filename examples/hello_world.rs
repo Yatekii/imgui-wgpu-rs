@@ -83,7 +83,7 @@ fn main() {
     .expect("Failed to initialize renderer");
 
   let mut last_frame = Instant::now();
-
+  let mut demo_open = true;
 
   //
   // Event loop
@@ -148,6 +148,8 @@ fn main() {
     let delta_s = delta.as_secs() as f32 + delta.subsec_nanos() as f32 / 1_000_000_000.0;
     last_frame = now;
 
+    imgui_winit_support::update_mouse_cursor(&imgui, &window);
+
     let frame = swap_chain.get_next_texture();
     let frame_size = imgui_winit_support::get_frame_size(&window, dpi_factor).unwrap();
     let ui = imgui.frame(frame_size, delta_s);
@@ -173,6 +175,8 @@ fn main() {
         .build(|| {
             ui.text(im_str!("Hello world!"));
         });
+
+      ui.show_demo_window(&mut demo_open);
     }
 
     let mut encoder: wgpu::CommandEncoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { todo: 0 });
