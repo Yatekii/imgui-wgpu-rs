@@ -166,6 +166,13 @@ fn main() {
                 mouse_pos.1
             ));
         });
+
+      ui.window(im_str!("Hello too"))
+        .position((300.0, 300.0), ImGuiCond::FirstUseEver)
+        .size((400.0, 200.0), ImGuiCond::FirstUseEver)
+        .build(|| {
+            ui.text(im_str!("Hello world!"));
+        });
     }
 
     let mut encoder: wgpu::CommandEncoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { todo: 0 });

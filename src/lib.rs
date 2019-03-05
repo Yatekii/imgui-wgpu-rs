@@ -7,6 +7,8 @@ pub type RendererResult<T> = Result<T, RendererError>;
 
 #[derive(Clone, Debug)]
 pub enum RendererError {
+  VertexBufferTooSmall,
+  IndexBufferTooSmall,
   BadTexture(ImTexture),
 }
 
@@ -98,9 +100,11 @@ pub struct Renderer {
   uniform_buffer: wgpu::Buffer,
   uniform_bind_group: wgpu::BindGroup,
   vertex_buffer: wgpu::Buffer,
-  vertex_max: usize,
+  vertex_count: u32,
+  vertex_max: u32,
   index_buffer: wgpu::Buffer,
-  index_max: usize,
+  index_count: u32,
+  index_max: u32,
   textures: Textures<Texture>,
   atlas: ImTexture,
   clear_color: Option<wgpu::Color>,
@@ -234,16 +238,16 @@ impl Renderer {
 
     // Create vertex/index buffer
     let vertex_max = 4096;
-    let vertex_size = size_of::<ImDrawVert>();
+    let vertex_size = size_of::<ImDrawVert>() as u32;
     let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-      size: (vertex_max * vertex_size) as u32,
+      size: vertex_max * vertex_size,
       usage: wgpu::BufferUsageFlags::VERTEX | wgpu::BufferUsageFlags::TRANSFER_DST,
     });
 
     let index_max = 4096;
-    let index_size = size_of::<u16>();
+    let index_size = size_of::<u16>() as u32;
     let index_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-      size: (vertex_max * index_size) as u32,
+      size: vertex_max * index_size,
       usage: wgpu::BufferUsageFlags::INDEX | wgpu::BufferUsageFlags::TRANSFER_DST,
     });
     
@@ -285,8 +289,10 @@ impl Renderer {
       uniform_buffer,
       uniform_bind_group,
       vertex_buffer,
+      vertex_count: 0,
       vertex_max,
       index_buffer,
+      index_count: 0,
       index_max,
       textures,
       atlas,
@@ -343,6 +349,8 @@ impl Renderer {
     rpass.set_pipeline(&self.pipeline);
     rpass.set_vertex_buffers(&[(&self.vertex_buffer, 0)]);
     rpass.set_index_buffer(&self.index_buffer, 0);
+    self.vertex_count = 0;
+    self.index_count = 0;
 
     self.update_uniform_buffer(&matrix)?;
     rpass.set_bind_group(0, &self.uniform_bind_group);
@@ -366,13 +374,15 @@ impl Renderer {
   ) -> RendererResult<()> {
       let (fb_width, fb_height) = fb_size;
 
+      let base_vertex = self.vertex_count;
+      let mut start = self.index_count;
+
       let vertex_buffer = self.upload_vertex_buffer(device, draw_list.vtx_buffer)?;
       let index_buffer = self.upload_index_buffer(device, draw_list.idx_buffer)?;
 
       //rpass.set_vertex_buffers(&[(&vertex_buffer, 0)]);
       //rpass.set_index_buffer(&index_buffer, 0);
     
-      let mut start = 0;
       for cmd in draw_list.cmd_buffer {
         let texture_id = cmd.texture_id.into();
         let tex = self
@@ -396,7 +406,7 @@ impl Renderer {
             .round() as u16,
         );
 
-        rpass.draw_indexed(start..end, 0, 0..1);
+        rpass.draw_indexed(start..end, base_vertex as i32, 0..1);
           
         start = end;
       }
@@ -413,12 +423,19 @@ impl Renderer {
 
   fn upload_vertex_buffer(
     &mut self,
-    device: &mut wgpu::Device,
+    _device: &mut wgpu::Device,
     vtx_buffer: &[ImDrawVert],
 //  ) -> RendererResult<wgpu::Buffer> {
   ) -> RendererResult<()> {
-    self.vertex_buffer.set_sub_data(0, cast_slice(vtx_buffer));
-    Ok(())
+    let vertex_count = vtx_buffer.len() as u32;
+    if self.vertex_count + vertex_count < self.vertex_max {
+      self.vertex_buffer.set_sub_data(self.vertex_count * (size_of::<ImDrawVert>() as u32), cast_slice(vtx_buffer));
+      self.vertex_count += vertex_count;
+      Ok(())
+    }
+    else {
+      Err(RendererError::VertexBufferTooSmall)
+    }
     /*
     let size = (vtx_buffer.len() * size_of::<ImDrawVert>()) as u32;
     let (buffer, data) = device.create_buffer_mapped(&wgpu::BufferDescriptor {
@@ -433,12 +450,19 @@ impl Renderer {
 
   fn upload_index_buffer(
     &mut self,
-    device: &mut wgpu::Device,
+    _device: &mut wgpu::Device,
     idx_buffer: &[ImDrawIdx],
 //  ) -> RendererResult<wgpu::Buffer> {
   ) -> RendererResult<()> {
-    self.index_buffer.set_sub_data(0, cast_slice(idx_buffer));
-    Ok(())
+    let index_count = idx_buffer.len() as u32;
+    if self.index_count + index_count < self.index_max {
+      self.index_buffer.set_sub_data(self.index_count * (size_of::<ImDrawIdx>() as u32), cast_slice(idx_buffer));
+      self.index_count += index_count;
+      Ok(())
+    }
+    else {
+      Err(RendererError::IndexBufferTooSmall)
+    }
     /*
     let size = (idx_buffer.len() * size_of::<ImDrawIdx>()) as u32;
     let (buffer, data) = device.create_buffer_mapped(&wgpu::BufferDescriptor {
