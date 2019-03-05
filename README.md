@@ -1,6 +1,6 @@
 # dear imgui wgpu-rs renderer
 
-Draw dear imgui UIs as a wgpu render pass. Based on imgui-gfx-renderer.
+Draw dear imgui UIs as a wgpu render pass. Based on imgui-gfx-renderer from [imgui-rs](https://github.com/Gekkio/imgui-rs).
 
 #### Initialize
 ```rust
