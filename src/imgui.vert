@@ -16,6 +16,6 @@ layout(location = 1) out vec4 v_Color;
 
 void main() {
   v_UV = a_UV;
-  v_Color = vec4((a_Color >> 24) & 0xFF, (a_Color >> 16) & 0xFF, (a_Color >> 8) & 0xFF, a_Color & 0xFF) / 255.0;
+  v_Color = vec4(a_Color & 0xFF, (a_Color >> 8) & 0xFF, (a_Color >> 16) & 0xFF, (a_Color >> 24) & 0xFF) / 255.0;
   gl_Position = u_Matrix * vec4(a_Pos.xy, 0.0, 1.0);
 }
