@@ -42,6 +42,6 @@ Work in progress.
 
 Known issues:
 * clip rects are not implemented
-* wgpu buffer uploading is still in development, so currently only one draw list is supported
+* wgpu buffer uploading is still in development, so currently there is a hardcoded limit on # of vertices/indices to draw
 
 Contributions welcome.
