@@ -1,9 +1,11 @@
 # dear imgui wgpu-rs renderer
 
-Draw dear imgui UIs as a wgpu render pass. Based on imgui-gfx-renderer.
+Draw dear imgui UIs as a wgpu render pass. Based on imgui-gfx-renderer from [imgui-rs](https://github.com/Gekkio/imgui-rs).
 
 #### Initialize
 ```rust
+use imgui_wgpu::Renderer;
+
 let device: wgpu::Device = ..;
 let imgui: imgui::ImGui = ..;
 let format = wgpu::TextureFormat::Bgra8Unorm;
@@ -42,6 +44,6 @@ Work in progress.
 
 Known issues:
 * clip rects are not implemented
-* wgpu buffer uploading is still in development, so currently only one draw list is supported
+* wgpu buffer uploading is still in development, so currently there is a hardcoded limit on # of vertices/indices to draw
 
 Contributions welcome.
