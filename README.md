@@ -4,6 +4,8 @@ Draw dear imgui UIs as a wgpu render pass. Based on imgui-gfx-renderer from [img
 
 #### Initialize
 ```rust
+use imgui_wgpu::Renderer;
+
 let device: wgpu::Device = ..;
 let imgui: imgui::ImGui = ..;
 let format = wgpu::TextureFormat::Bgra8Unorm;
