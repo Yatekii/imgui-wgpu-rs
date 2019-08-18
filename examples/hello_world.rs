@@ -21,7 +21,7 @@ fn main() {
 
         let version = env!("CARGO_PKG_VERSION");
 
-        let mut window = wgpu::winit::Window::new(&events_loop).unwrap();
+        let window = wgpu::winit::Window::new(&events_loop).unwrap();
         window.set_inner_size(LogicalSize { width: 1280.0, height: 720.0 });
         window.set_title(&format!("imgui-wgpu {}", version));
         let hidpi_factor = window.get_hidpi_factor();
@@ -45,8 +45,6 @@ fn main() {
         },
         limits: wgpu::Limits::default(),
     });
-
-    let surface = instance.create_surface(&window);
 
     //
     // Set up swap chain
@@ -146,7 +144,7 @@ fn main() {
 
         let now = Instant::now();
         let delta = now - last_frame;
-        let delta_s = delta.as_secs() as f32 + delta.subsec_nanos() as f32 / 1_000_000_000.0;
+        let delta_s = delta.as_micros();
         last_frame = now;
 
         let frame = swap_chain.get_next_texture();
@@ -155,7 +153,7 @@ fn main() {
         let ui = imgui.frame();
 
         {
-            let mut window = imgui::Window::new(im_str!("Hello world"));
+            let window = imgui::Window::new(im_str!("Hello world"));
             window
                 .size([300.0, 100.0], Condition::FirstUseEver)
                 .build(&ui, || {
@@ -170,12 +168,12 @@ fn main() {
                     ));
                 });
 
-            let mut window = imgui::Window::new(im_str!("Hello too"));
+            let window = imgui::Window::new(im_str!("Hello too"));
             window
                 .size([400.0, 200.0], Condition::FirstUseEver)
                 .position([400.0, 200.0], Condition::FirstUseEver)
                 .build(&ui, || {
-                    ui.text(im_str!("Hello world!"));
+                    ui.text(im_str!("Frametime: {}us", delta_s));
                 });
 
             ui.show_demo_window(&mut demo_open);

@@ -316,7 +316,7 @@ impl Renderer {
         width: f64,
         height: f64,
         hidpi_factor: f64,
-        device: &mut wgpu::Device,
+        device: &wgpu::Device,
         encoder: &mut wgpu::CommandEncoder,
         view: &wgpu::TextureView,
     ) -> RendererResult<()> {
@@ -368,7 +368,7 @@ impl Renderer {
 
     fn render_draw_list<'render>(
         &mut self,
-        device: &mut wgpu::Device,
+        device: &wgpu::Device,
         rpass: &mut wgpu::RenderPass<'render>,
         draw_list: &DrawList,
         fb_size: (f32, f32),
@@ -424,11 +424,10 @@ impl Renderer {
 
     fn update_uniform_buffer(
         &mut self,
-        device: &mut wgpu::Device,
+        device: &wgpu::Device,
         encoder: &mut wgpu::CommandEncoder,
         matrix: &[[f32; 4]; 4],
     ) {
-        dbg!(matrix);
         let buffer = device.create_buffer_mapped(
             16,
             wgpu::BufferUsage::TRANSFER_SRC,
@@ -445,7 +444,7 @@ impl Renderer {
 
     fn upload_vertex_buffer(
         &mut self,
-        device: &mut wgpu::Device,
+        device: &wgpu::Device,
         vtx_buffer: &[DrawVert],
     //  ) -> RendererResult<wgpu::Buffer> {
     ) -> wgpu::Buffer {
@@ -469,7 +468,7 @@ impl Renderer {
 
     fn upload_index_buffer(
         &mut self,
-        device: &mut wgpu::Device,
+        device: &wgpu::Device,
         idx_buffer: &[DrawIdx],
     //  ) -> RendererResult<wgpu::Buffer> {
     ) -> wgpu::Buffer {
