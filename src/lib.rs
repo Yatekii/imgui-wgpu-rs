@@ -399,18 +399,20 @@ impl Renderer {
                     rpass.set_bind_group(1, tex.bind_group(), &[]);
 
                     let end = start + count as u32;
-                    let scissor = (
-                        cmd_params.clip_rect[0].max(0.0).min(fb_width).round() as u16,
-                        cmd_params.clip_rect[1].max(0.0).min(fb_height).round() as u16,
+                    let scissors = (
+                        cmd_params.clip_rect[0].max(0.0).min(fb_width).round() as u32,
+                        cmd_params.clip_rect[1].max(0.0).min(fb_height).round() as u32,
                         (cmd_params.clip_rect[2] - cmd_params.clip_rect[0])
                             .abs()
                             .min(fb_width)
-                            .round() as u16,
+                            .round() as u32,
                         (cmd_params.clip_rect[3] - cmd_params.clip_rect[1])
                             .abs()
                             .min(fb_height)
-                            .round() as u16,
+                            .round() as u32,
                     );
+
+                    rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
 
                     rpass.draw_indexed(start..end, base_vertex as i32, 0..1);
                     
