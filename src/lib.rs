@@ -60,28 +60,40 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn new(texture: wgpu::Texture, sampler: wgpu::Sampler, layout: &wgpu::BindGroupLayout, device: &mut wgpu::Device) -> Self {
+    pub fn new(texture: wgpu::Texture, layout: &wgpu::BindGroupLayout, device: &wgpu::Device) -> Self {
 
         let view = texture.create_default_view();
 
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Linear,
+            lod_min_clamp: -100.0,
+            lod_max_clamp: 100.0,
+            compare_function: wgpu::CompareFunction::Always,
+        });
+
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        layout,
-        bindings: &[
-            wgpu::Binding {
-            binding: 0,
-            resource: wgpu::BindingResource::TextureView(&view),
-            },
-            wgpu::Binding {
-            binding: 1,
-            resource: wgpu::BindingResource::Sampler(&sampler),
-            },
-        ]
+            layout,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::Binding {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ]
         });
 
         Texture {
-        texture,
-        sampler,
-        bind_group,
+            texture,
+            sampler,
+            bind_group,
         }
     }
 
@@ -106,7 +118,7 @@ pub struct Renderer {
     index_count: u64,
     index_max: u64,
     textures: Textures<Texture>,
-    atlas: TextureId,
+    texture_layout: wgpu::BindGroupLayout,
     clear_color: Option<wgpu::Color>,
 }
 
@@ -116,7 +128,7 @@ impl Renderer {
         device: &mut wgpu::Device,
         format: wgpu::TextureFormat,
         clear_color: Option<wgpu::Color>,
-    ) -> RendererResult<Renderer> {
+    ) -> Renderer {
 
         // Create shaders
         let (vs_code, fs_code) = Shaders::get_program_code();
@@ -133,11 +145,11 @@ impl Renderer {
         let uniform_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         bindings: &[
             wgpu::BindGroupLayoutBinding {
-            binding: 0,
-            visibility: wgpu::ShaderStage::VERTEX,
-            ty: wgpu::BindingType::UniformBuffer,
-            },
-        ]
+                binding: 0,
+                visibility: wgpu::ShaderStage::VERTEX,
+                ty: wgpu::BindingType::UniformBuffer,
+                },
+            ]
         });
 
         let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -250,43 +262,10 @@ impl Renderer {
             size: vertex_max * index_size,
             usage: wgpu::BufferUsage::INDEX | wgpu::BufferUsage::TRANSFER_DST,
         });
-        
-        // Create texture
-        let texture = {
-            let mut atlas = imgui.fonts();
-            let handle = atlas.build_rgba32_texture();
-            let texture = device.create_texture(&wgpu::TextureDescriptor {
-                size: wgpu::Extent3d { width: handle.width, height: handle.height, depth: 1 },
-                array_layer_count: 1,
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: wgpu::TextureFormat::Rgba8Unorm,
-                usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::TRANSFER_DST
-            });
 
-            Renderer::upload_immediate(handle.width, handle.height, handle.data, &texture, device);
-            texture
-        };
-
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::FilterMode::Linear,
-            lod_min_clamp: -100.0,
-            lod_max_clamp: 100.0,
-            compare_function: wgpu::CompareFunction::Always,
-        });
-
-        let pair = Texture::new(texture, sampler, &texture_layout, device);
         let mut textures = Textures::new();
-        let atlas = textures.insert(pair);
-        // imgui.set_font_texture_id(atlas);
 
-        Ok(Renderer {
+        let mut renderer = Renderer {
             pipeline,
             uniform_buffer,
             uniform_bind_group,
@@ -297,17 +276,17 @@ impl Renderer {
             index_count: 0,
             index_max,
             textures,
-            atlas,
+            texture_layout,
             clear_color,
-        })
+        };
+
+        renderer.reload_font_texture(imgui, device);
+
+        renderer
     }
 
     pub fn textures(&mut self) -> &mut Textures<Texture> {
         &mut self.textures
-    }
-
-    pub fn atlas(&mut self) -> &Texture {
-        &mut self.textures.get(self.atlas).unwrap()
     }
 
     pub fn render<'a>(
@@ -492,30 +471,64 @@ impl Renderer {
         */
     }
 
-    fn upload_immediate(width: u32, height: u32, data: &[u8], target: &wgpu::Texture, device: &mut wgpu::Device) {
+    pub fn reload_font_texture(&mut self, imgui: &mut Context, device: &mut wgpu::Device) {
+        let mut data;
+        let handle = {
+            let mut atlas = imgui.fonts();
+            let handle = atlas.build_rgba32_texture();
+            data = handle.data.to_vec();
+            
+            imgui::FontAtlasTexture {
+                width: handle.width,
+                height: handle.height,
+                data: data.as_slice(),
+            }
+        };
+        let font_texture_id = self.upload_texture(imgui, device, &handle);
+        
+        let mut atlas = imgui.fonts();
+        atlas.tex_id = font_texture_id;
+    }
+
+    fn upload_texture(
+        &mut self,
+        imgui: &mut Context,
+        device: &mut wgpu::Device,
+        handle: &imgui::FontAtlasTexture,
+    ) -> TextureId {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            size: wgpu::Extent3d { width: handle.width, height: handle.height, depth: 1 },
+            array_layer_count: 1,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::TRANSFER_DST,
+        });
+
         // Place in wgpu buffer
-        let bytes = data.len();
+        let bytes = handle.data.len();
         let buffer = device.create_buffer_mapped(
             bytes,
             wgpu::BufferUsage::TRANSFER_SRC,
         )
-        .fill_from_slice(data);
+        .fill_from_slice(handle.data);
 
         // Upload immediately
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             todo: 0,
         });
 
-        let pixel_size = bytes as u32 / width / height;
+        let pixel_size = bytes as u32 / handle.width / handle.height;
         encoder.copy_buffer_to_texture(
             wgpu::BufferCopyView {
                 buffer: &buffer,
                 offset: 0,
-                row_pitch: pixel_size * width,
-                image_height: height,
+                row_pitch: pixel_size * handle.width,
+                image_height: handle.height,
             },
             wgpu::TextureCopyView {
-                texture: target,
+                texture: &texture,
                 mip_level: 0,
                 array_layer: 0,
                 origin: wgpu::Origin3d {
@@ -525,8 +538,8 @@ impl Renderer {
                 },
             },
             wgpu::Extent3d {
-                width,
-                height,
+                width: handle.width,
+                height: handle.height,
                 depth: 1,
             },
         );
@@ -534,5 +547,8 @@ impl Renderer {
         device
             .get_queue()
             .submit(&[encoder.finish()]);
+
+        let texture = Texture::new(texture, &self.texture_layout, device);
+        self.textures.insert(texture)
     }
 }
