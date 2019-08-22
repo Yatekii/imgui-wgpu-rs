@@ -336,11 +336,10 @@ impl Renderer {
         rpass.set_bind_group(0, &self.uniform_bind_group, &[]);
 
         let fb_scale = ui.io().display_framebuffer_scale;
-        let draw_data = ui.render();
-        // draw_data.scale_clip_rects(fb_scale);
+        let mut draw_data = ui.render();
         
         for draw_list in draw_data.draw_lists() {
-            self.render_draw_list(device, &mut rpass, &draw_list, fb_size)?;
+            self.render_draw_list(device, &mut rpass, &draw_list, fb_size, (fb_scale[0], fb_scale[1]))?;
         }
         Ok(())
     }
@@ -351,6 +350,7 @@ impl Renderer {
         rpass: &mut wgpu::RenderPass<'render>,
         draw_list: &DrawList,
         fb_size: (f32, f32),
+        fb_scale: (f32, f32)
     ) -> RendererResult<()> {
         let (fb_width, fb_height) = fb_size;
 
@@ -369,6 +369,12 @@ impl Renderer {
                     count,
                     cmd_params,
                 } => {
+                    let clip_rect = [
+                        cmd_params.clip_rect[0] * fb_scale.0,
+                        cmd_params.clip_rect[1] * fb_scale.1,
+                        cmd_params.clip_rect[2] * fb_scale.0,
+                        cmd_params.clip_rect[3] * fb_scale.1,
+                    ];
                     let texture_id = cmd_params.texture_id.into();
                     let tex = self
                         .textures
@@ -379,13 +385,13 @@ impl Renderer {
 
                     let end = start + count as u32;
                     let scissors = (
-                        cmd_params.clip_rect[0].max(0.0).min(fb_width).round() as u32,
-                        cmd_params.clip_rect[1].max(0.0).min(fb_height).round() as u32,
-                        (cmd_params.clip_rect[2] - cmd_params.clip_rect[0])
+                        clip_rect[0].max(0.0).min(fb_width).round() as u32,
+                        clip_rect[1].max(0.0).min(fb_height).round() as u32,
+                        (clip_rect[2] - clip_rect[0])
                             .abs()
                             .min(fb_width)
                             .round() as u32,
-                        (cmd_params.clip_rect[3] - cmd_params.clip_rect[1])
+                        (clip_rect[3] - clip_rect[1])
                             .abs()
                             .min(fb_height)
                             .round() as u32,
