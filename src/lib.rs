@@ -352,7 +352,7 @@ impl Renderer {
         fb_size: (f32, f32),
         fb_scale: (f32, f32)
     ) -> RendererResult<()> {
-        let (fb_width, fb_height) = fb_size;
+        let (fb_width, fb_height) = (fb_size.0 * fb_scale.0, fb_size.1 * fb_scale.1);
 
         let base_vertex = self.vertex_count;
         let mut start = self.index_count as u32;
