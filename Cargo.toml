@@ -18,9 +18,9 @@ env_logger = "0.5"
 glsl-to-spirv = "0.1"
 log = "0.4"
 num-traits = "0.2.6"
-imgui = { git = "https://github.com/Yatekii/imgui-rs", rev = "e577870e7f1fd1c2863ab013ed70c75f079f4dd1" }
+imgui = { git = "https://github.com/Yatekii/imgui-rs", rev = "cf1ca210a9298a7a01e0431bc7c8d059a4f4794c" }
 # imgui = { path = "../imgui-rs" }
-imgui-winit-support = { git = "https://github.com/Yatekii/imgui-rs", rev = "e577870e7f1fd1c2863ab013ed70c75f079f4dd1" }
+imgui-winit-support = { git = "https://github.com/Yatekii/imgui-rs", rev = "cf1ca210a9298a7a01e0431bc7c8d059a4f4794c" }
 # imgui-winit-support = { path = "../imgui-rs/imgui-winit-support" }
 
 [dev-dependencies]
