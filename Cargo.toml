@@ -12,14 +12,17 @@ dx12 = ["wgpu/dx12"]
 vulkan = ["wgpu/vulkan"]
 
 [dependencies]
-wgpu = { git = "https://github.com/gfx-rs/wgpu-rs.git", features = ["vulkan"], rev="ce382f37355195f7ea6c204a22aa77e5280a236c" }
+wgpu = { version = "0.3.0", features = ["vulkan"] }
 cgmath = "0.17"
 env_logger = "0.5"
 glsl-to-spirv = "0.1"
 log = "0.4"
 num-traits = "0.2.6"
-imgui = { git = "https://github.com/Yatekii/imgui-rs", rev = "53ebb60d0c8cc6644883f9c6aa6c5efe88333c22" }
-imgui-winit-support = { git = "https://github.com/Yatekii/imgui-rs", rev = "53ebb60d0c8cc6644883f9c6aa6c5efe88333c22" }
+# imgui = { git = "https://github.com/Yatekii/imgui-rs", rev = "53ebb60d0c8cc6644883f9c6aa6c5efe88333c22" }
+imgui = { path = "../imgui-rs" }
+# imgui-winit-support = { git = "https://github.com/Yatekii/imgui-rs", rev = "53ebb60d0c8cc6644883f9c6aa6c5efe88333c22" }
+imgui-winit-support = { path = "../imgui-rs/imgui-winit-support" }
 
 [dev-dependencies]
-winit = "*"
+winit = "0.20.0-alpha3"
+raw-window-handle = "0.1"

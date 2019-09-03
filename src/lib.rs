@@ -23,19 +23,14 @@ pub enum ShaderStage {
 pub enum Shaders {}
 
 impl Shaders {
-    fn compile_glsl(code: &str, stage: ShaderStage) -> Vec<u8> {
-        use std::io::Read;
-
+    fn compile_glsl(code: &str, stage: ShaderStage) -> Vec<u32> {
         let ty = match stage {
-        ShaderStage::Vertex => glsl_to_spirv::ShaderType::Vertex,
-        ShaderStage::Fragment => glsl_to_spirv::ShaderType::Fragment,
-        ShaderStage::Compute => glsl_to_spirv::ShaderType::Compute,
+            ShaderStage::Vertex => glsl_to_spirv::ShaderType::Vertex,
+            ShaderStage::Fragment => glsl_to_spirv::ShaderType::Fragment,
+            ShaderStage::Compute => glsl_to_spirv::ShaderType::Compute,
         };
-        
-        let mut output = glsl_to_spirv::compile(code, ty).unwrap();
-        let mut spv = Vec::new();
-        output.read_to_end(&mut spv).unwrap();
-        spv
+
+        wgpu::read_spirv(glsl_to_spirv::compile(&code, ty).unwrap()).unwrap()
     }
 
     fn to_string(data: &'static [u8]) -> &'static str {
@@ -139,15 +134,17 @@ impl Renderer {
         // Create uniform matrix buffer
         let size = 64;
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            size, usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST,
+            size, usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
         });
 
         let uniform_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        bindings: &[
-            wgpu::BindGroupLayoutBinding {
-                binding: 0,
-                visibility: wgpu::ShaderStage::VERTEX,
-                ty: wgpu::BindingType::UniformBuffer,
+            bindings: &[
+                wgpu::BindGroupLayoutBinding {
+                    binding: 0,
+                    visibility: wgpu::ShaderStage::VERTEX,
+                    ty: wgpu::BindingType::UniformBuffer {
+                        dynamic: false,
+                    },
                 },
             ]
         });
@@ -171,7 +168,10 @@ impl Renderer {
                 wgpu::BindGroupLayoutBinding {
                     binding: 0,
                     visibility: wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::SampledTexture,
+                    ty: wgpu::BindingType::SampledTexture {
+                        multisampled: false,
+                        dimension: wgpu::TextureViewDimension::D2,
+                    },
                 },
                 wgpu::BindGroupLayoutBinding {
                     binding: 1,
@@ -188,21 +188,21 @@ impl Renderer {
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             layout: &pipeline_layout,
-            vertex_stage: wgpu::PipelineStageDescriptor {
+            vertex_stage: wgpu::ProgrammableStageDescriptor {
                 module: &vs_module,
                 entry_point: "main",
             },
-            fragment_stage: Some(wgpu::PipelineStageDescriptor {
+            fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
                 module: &fs_module,
                 entry_point: "main",
             }),
-            rasterization_state: wgpu::RasterizationStateDescriptor {
+            rasterization_state: Some(wgpu::RasterizationStateDescriptor {
                 front_face: wgpu::FrontFace::Cw,
                 cull_mode: wgpu::CullMode::None,
                 depth_bias: 0,
                 depth_bias_slope_scale: 0.0,
                 depth_bias_clamp: 0.0,
-            },
+            }),
             primitive_topology: wgpu::PrimitiveTopology::TriangleList,
             color_states: &[
                 wgpu::ColorStateDescriptor {
@@ -246,6 +246,8 @@ impl Renderer {
                 },
             ],
             sample_count: 1,
+            sample_mask: !0,
+            alpha_to_coverage_enabled: false,
         });
 
         // Create vertex/index buffer
@@ -253,14 +255,14 @@ impl Renderer {
         let vertex_size = size_of::<DrawVert>() as u64;
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             size: vertex_max * vertex_size,
-            usage: wgpu::BufferUsage::VERTEX | wgpu::BufferUsage::TRANSFER_DST,
+            usage: wgpu::BufferUsage::VERTEX | wgpu::BufferUsage::COPY_DST,
         });
 
         let index_max = 32768;
         let index_size = size_of::<u16>() as u64;
         let index_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             size: vertex_max * index_size,
-            usage: wgpu::BufferUsage::INDEX | wgpu::BufferUsage::TRANSFER_DST,
+            usage: wgpu::BufferUsage::INDEX | wgpu::BufferUsage::COPY_DST,
         });
 
         let mut textures = Textures::new();
@@ -360,8 +362,8 @@ impl Renderer {
         let vertex_buffer = self.upload_vertex_buffer(device, draw_list.vtx_buffer());
         let index_buffer = self.upload_index_buffer(device, draw_list.idx_buffer());
 
-        rpass.set_vertex_buffers(&[(&vertex_buffer, 0)]);
         rpass.set_index_buffer(&index_buffer, 0);
+        rpass.set_vertex_buffers(0, &[(&vertex_buffer, 0)]);
         
         for cmd in draw_list.commands() {
             match cmd {
@@ -417,7 +419,7 @@ impl Renderer {
     ) {
         let buffer = device.create_buffer_mapped(
             16,
-            wgpu::BufferUsage::TRANSFER_SRC,
+            wgpu::BufferUsage::COPY_SRC,
         )
         .fill_from_slice(matrix.iter().flatten().map(|f| *f).collect::<Vec<f32>>().as_slice());
         encoder.copy_buffer_to_buffer(
@@ -438,7 +440,7 @@ impl Renderer {
         let vertex_count = vtx_buffer.len();
         device.create_buffer_mapped(
             vertex_count,
-            wgpu::BufferUsage::TRANSFER_SRC | wgpu::BufferUsage::VERTEX,
+            wgpu::BufferUsage::COPY_SRC | wgpu::BufferUsage::VERTEX,
         )
         .fill_from_slice(vtx_buffer)
         /*
@@ -462,7 +464,7 @@ impl Renderer {
         let index_count = idx_buffer.len();
         device.create_buffer_mapped(
             index_count,
-            wgpu::BufferUsage::TRANSFER_SRC | wgpu::BufferUsage::INDEX,
+            wgpu::BufferUsage::COPY_SRC | wgpu::BufferUsage::INDEX,
         )
         .fill_from_slice(idx_buffer)
         /*
@@ -509,14 +511,14 @@ impl Renderer {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::TRANSFER_DST,
+            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
         });
 
         // Place in wgpu buffer
         let bytes = handle.data.len();
         let buffer = device.create_buffer_mapped(
             bytes,
-            wgpu::BufferUsage::TRANSFER_SRC,
+            wgpu::BufferUsage::COPY_SRC,
         )
         .fill_from_slice(handle.data);
 
