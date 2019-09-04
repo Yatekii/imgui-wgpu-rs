@@ -25,7 +25,7 @@ fn main() {
     // Set up window and GPU
     //
     
-    let mut event_loop = EventLoop::new();
+    let event_loop = EventLoop::new();
     let (window, instance, mut size, surface, hidpi_factor) = {
         use raw_window_handle::HasRawWindowHandle as _;
 
