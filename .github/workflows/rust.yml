@@ -9,9 +9,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: ${{ matrix.rust }}
     - name: Build
       run: cargo build --verbose
     - name: Run tests
