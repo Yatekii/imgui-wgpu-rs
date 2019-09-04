@@ -20,11 +20,8 @@ use std::time::Instant;
 
 fn main() {
     env_logger::init();
-    
-    //
-    // Set up window and GPU
-    //
-    
+
+    // Set up window and GPU    
     let event_loop = EventLoop::new();
     let (window, instance, mut size, surface, hidpi_factor) = {
         use raw_window_handle::HasRawWindowHandle as _;
@@ -57,9 +54,7 @@ fn main() {
         limits: wgpu::Limits::default(),
     });
 
-    //
     // Set up swap chain
-    //
     let mut sc_desc = wgpu::SwapChainDescriptor {
         usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8Unorm,
@@ -70,9 +65,7 @@ fn main() {
 
     let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
-    //
     // Set up dear imgui
-    //
     let mut imgui = imgui::Context::create();
     let mut platform = imgui_winit_support::WinitPlatform::init(&mut imgui);
     platform.attach_window(imgui.io_mut(), &window, imgui_winit_support::HiDpiMode::Default);
@@ -101,9 +94,7 @@ fn main() {
     let mut last_frame = Instant::now();
     let mut demo_open = true;
 
-    //
     // Event loop
-    //
     event_loop.run(move |event, _, control_flow| {
         *control_flow = if cfg!(feature = "metal-auto-capture") {
             ControlFlow::Exit
@@ -111,7 +102,6 @@ fn main() {
             ControlFlow::Poll
         };
         match event {
-            // On resize
             Event::WindowEvent {
                 event: WindowEvent::Resized(_),
                 ..
@@ -130,7 +120,6 @@ fn main() {
 
                 swap_chain = device.create_swap_chain(&surface, &sc_desc);
             }
-            // On ESC / close
             Event::WindowEvent {
                 event: WindowEvent::KeyboardInput {
                     input: KeyboardInput {
@@ -155,7 +144,7 @@ fn main() {
                 last_frame = now;
 
                 let frame = swap_chain.get_next_texture();
-                platform.prepare_frame(imgui.io_mut(), &window) // step 4
+                platform.prepare_frame(imgui.io_mut(), &window)
                     .expect("Failed to prepare frame");
                 let ui = imgui.frame();
 
