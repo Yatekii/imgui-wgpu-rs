@@ -179,7 +179,7 @@ fn main() {
 
                 platform.prepare_render(&ui, &window);
                 renderer
-                    .render(ui, size.width, size.height, hidpi_factor, &mut device, &mut encoder, &frame.view)
+                    .render(ui, &mut device, &mut encoder, &frame.view)
                     .expect("Rendering failed");
 
                 device

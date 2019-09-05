@@ -256,29 +256,27 @@ impl Renderer {
     pub fn render<'a>(
         &mut self,
         ui: Ui<'a>,
-        width: f64,
-        height: f64,
-        hidpi_factor: f64,
         device: &Device,
         encoder: &mut CommandEncoder,
         view: &TextureView,
     ) -> RendererResult<()> {
+        let draw_data = ui.render();
+        let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
+        let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
+        
         // If the render area is <= 0, exit here and now.
-        if !(width > 0.0 && height > 0.0) {
+        if !(fb_width > 0.0 && fb_height > 0.0) {
             return Ok(());
         }
 
-        // Calculate the actual scaled framebuffer size considering hidpi.
-        let fb_size = (
-            (width * hidpi_factor) as f32,
-            (height * hidpi_factor) as f32,
-        );
+        let width = draw_data.display_size[0];
+        let height = draw_data.display_size[1];
 
         // Create and update the transform matrix for the current frame.
         // This is required to adapt to vulkan coordinates.
         let matrix = [
-            [(2.0 / width) as f32, 0.0, 0.0, 0.0],
-            [0.0, (2.0 / height) as f32, 0.0, 0.0],
+            [2.0 / width, 0.0, 0.0, 0.0],
+            [0.0, 2.0 / height as f32, 0.0, 0.0],
             [0.0, 0.0, -1.0, 0.0],
             [-1.0, -1.0, 0.0, 1.0],
         ];
@@ -297,14 +295,16 @@ impl Renderer {
         });
         rpass.set_pipeline(&self.pipeline);
         rpass.set_bind_group(0, &self.uniform_bind_group, &[]);
-
-        // Get the current framebuffer data from imgui.
-        let fb_scale = ui.io().display_framebuffer_scale;
-        let draw_data = ui.render();
         
         // Execute all the imgui render work.
         for draw_list in draw_data.draw_lists() {
-            self.render_draw_list(device, &mut rpass, &draw_list, fb_size, (fb_scale[0], fb_scale[1]))?;
+            self.render_draw_list(
+                device,
+                &mut rpass,
+                &draw_list,
+                draw_data.display_pos,
+                draw_data.framebuffer_scale
+            )?;
         }
 
         Ok(())
@@ -316,11 +316,9 @@ impl Renderer {
         device: &Device,
         rpass: &mut RenderPass<'render>,
         draw_list: &DrawList,
-        fb_size: (f32, f32),
-        fb_scale: (f32, f32)
+        clip_off: [f32; 2],
+        clip_scale: [f32; 2]
     ) -> RendererResult<()> {
-        let (fb_width, fb_height) = (fb_size.0 * fb_scale.0, fb_size.1 * fb_scale.1);
-
         let mut start = 0;
 
         // Make sure the current buffers are uploaded to the GPU.
@@ -335,10 +333,10 @@ impl Renderer {
             match cmd {
                 Elements { count, cmd_params, } => {
                     let clip_rect = [
-                        cmd_params.clip_rect[0] * fb_scale.0,
-                        cmd_params.clip_rect[1] * fb_scale.1,
-                        cmd_params.clip_rect[2] * fb_scale.0,
-                        cmd_params.clip_rect[3] * fb_scale.1,
+                        (cmd_params.clip_rect[0] - clip_off[0]) * clip_scale[0],
+                        (cmd_params.clip_rect[1] - clip_off[1]) * clip_scale[1],
+                        (cmd_params.clip_rect[2] - clip_off[0]) * clip_scale[0],
+                        (cmd_params.clip_rect[3] - clip_off[1]) * clip_scale[1],
                     ];
 
                     // Set the current texture bind group on the renderpass.
@@ -353,20 +351,16 @@ impl Renderer {
                     let scissors = (
                         clip_rect[0]
                             .max(0.0)
-                            .min(fb_width)
-                            .round() as u32,
+                            .floor() as u32,
                         clip_rect[1]
                             .max(0.0)
-                            .min(fb_height)
-                            .round() as u32,
+                            .floor() as u32,
                         (clip_rect[2] - clip_rect[0])
                             .abs()
-                            .min(fb_width)
-                            .round() as u32,
+                            .ceil() as u32,
                         (clip_rect[3] - clip_rect[1])
                             .abs()
-                            .min(fb_height)
-                            .round() as u32,
+                            .ceil() as u32,
                     );
                     rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
 
