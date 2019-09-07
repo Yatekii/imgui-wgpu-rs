@@ -13,7 +13,7 @@ keywords = ["gui", "graphics", "wgpu", "imgui"]
 license = "MIT OR Apache-2.0"
 
 [features]
-default = ["vulkan"]
+default = []
 metal = ["wgpu/metal"]
 dx11 = ["wgpu/dx11"]
 dx12 = ["wgpu/dx12"]
