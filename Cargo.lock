@@ -510,19 +510,19 @@ dependencies = [
 
 [[package]]
 name = "imgui"
-version = "0.2.0-pre"
-source = "git+https://github.com/Gekkio/imgui-rs#54bbee6035fa6e90a1a9576a2680c41f1a6fbce1"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitflags 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "imgui-sys 0.2.0-pre (git+https://github.com/Gekkio/imgui-rs)",
+ "imgui-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "imgui-sys"
-version = "0.2.0-pre"
-source = "git+https://github.com/Gekkio/imgui-rs#54bbee6035fa6e90a1a9576a2680c41f1a6fbce1"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.30 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -534,8 +534,8 @@ dependencies = [
  "cgmath 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.5.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "glsl-to-spirv 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "imgui 0.2.0-pre (git+https://github.com/Gekkio/imgui-rs)",
- "imgui-winit-support 0.2.0-pre (git+https://github.com/Gekkio/imgui-rs)",
+ "imgui 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "imgui-winit-support 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "raw-window-handle 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -545,10 +545,10 @@ dependencies = [
 
 [[package]]
 name = "imgui-winit-support"
-version = "0.2.0-pre"
-source = "git+https://github.com/Gekkio/imgui-rs#54bbee6035fa6e90a1a9576a2680c41f1a6fbce1"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "imgui 0.2.0-pre (git+https://github.com/Gekkio/imgui-rs)",
+ "imgui 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winit 0.20.0-alpha3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1624,9 +1624,9 @@ dependencies = [
 "checksum glsl-to-spirv 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "28caebc98746d507603a2d3df66dcbe04e41d4febad0320f3eec1ef72b6bbef1"
 "checksum hibitset 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "47e7292fd9f7fe89fa35c98048f2d0a69b79ed243604234d18f6f8a1aa6f408d"
 "checksum humantime 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3ca7e5f2e110db35f93b837c81797f3714500b81d517bf20c431b16d3ca4f114"
-"checksum imgui 0.2.0-pre (git+https://github.com/Gekkio/imgui-rs)" = "<none>"
-"checksum imgui-sys 0.2.0-pre (git+https://github.com/Gekkio/imgui-rs)" = "<none>"
-"checksum imgui-winit-support 0.2.0-pre (git+https://github.com/Gekkio/imgui-rs)" = "<none>"
+"checksum imgui 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "edc41a2033f2a44742b870c5aa582c3be462f1157f29ffc4b99df12062c02585"
+"checksum imgui-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0350b22f0a64eeb852ed3995ddb5d6d24bd3038024d2bd81720a6573baa602dc"
+"checksum imgui-winit-support 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "27bc089330c589504aca1bd3c53071a9034346128b43c2bc110cebbbcf0b36e5"
 "checksum iovec 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "dbe6e417e7d0975db6512b90796e8ce223145ac4e33c377e4a42882a0e88bb08"
 "checksum js-sys 0.3.25 (registry+https://github.com/rust-lang/crates.io-index)" = "da3ea71161651a4cd97d999b2da139109c537b15ab33abc8ae4ead38deac8a03"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
