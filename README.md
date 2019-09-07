@@ -19,6 +19,4 @@ cargo run --release --example hello_world --features [vulkan|metal|dx12]
 
 Basic features are useable. Uses `wgpu-0.3.0` and `winit-0.20.0-alpha3` as well as `imgui-0.2.0` upstream.
 
-HiDpi is not working currently.
-
 Contributions are very welcome.
