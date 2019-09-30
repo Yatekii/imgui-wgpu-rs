@@ -109,10 +109,47 @@ impl Renderer {
         format: TextureFormat,
         clear_color: Option<Color>,
     ) -> Renderer {
-        // Load shaders.
         let (vs_code, fs_code) = Shaders::get_program_code();
-        let vs_module = device.create_shader_module(&Shaders::compile_glsl(vs_code, ShaderStage::Vertex));
-        let fs_module = device.create_shader_module(&Shaders::compile_glsl(fs_code, ShaderStage::Fragment));
+        let vs_raw = Shaders::compile_glsl(vs_code, ShaderStage::Vertex);
+        let fs_raw = Shaders::compile_glsl(fs_code, ShaderStage::Fragment);
+        Self::new_impl(imgui, device, format, clear_color, vs_raw, fs_raw)
+    }
+
+    /// Create an entirely new imgui wgpu renderer, using prebuilt spirv shaders
+    pub fn new_static(
+        imgui: &mut Context,
+        device: &mut Device,
+        format: TextureFormat,
+        clear_color: Option<Color>,
+    ) -> Renderer {
+        let vs_bytes = include_bytes!("imgui.vert.spv");
+        let fs_bytes = include_bytes!("imgui.frag.spv");
+
+        fn compile(shader: &[u8]) -> Vec<u32> {
+            let mut words = vec![];
+            for bytes4 in shader.chunks(4) {
+                words.push(u32::from_le_bytes([
+                    bytes4[0], bytes4[1], bytes4[2], bytes4[3],
+                ]));
+            }
+            words
+        }
+
+        Self::new_impl(imgui, device, format, clear_color, compile(vs_bytes), compile(fs_bytes))
+    }
+
+    /// Create an entirely new imgui wgpu renderer.
+    fn new_impl(
+        imgui: &mut Context,
+        device: &mut Device,
+        format: TextureFormat,
+        clear_color: Option<Color>,
+        vs_raw: Vec<u32>,
+        fs_raw: Vec<u32>,
+    ) -> Renderer {
+        // Load shaders.
+        let vs_module = device.create_shader_module(&vs_raw);
+        let fs_module = device.create_shader_module(&fs_raw);
 
         // Create the uniform matrix buffer.
         let size = 64;
