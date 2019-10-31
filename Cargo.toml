@@ -14,20 +14,16 @@ license = "MIT OR Apache-2.0"
 
 [features]
 default = []
-metal = ["wgpu/metal"]
-dx11 = ["wgpu/dx11"]
-dx12 = ["wgpu/dx12"]
-vulkan = ["wgpu/vulkan"]
 
 [dependencies]
-wgpu = { version = "0.3.0" }
+wgpu = "0.4"
 glsl-to-spirv = "0.1"
 log = "0.4"
 imgui = "0.2.0"
 
 [dev-dependencies]
-winit = "0.20.0-alpha3"
-raw-window-handle = "0.1"
+winit = "0.20.0-alpha4"
+raw-window-handle = "0.3"
 env_logger = "0.5"
 
 [dev-dependencies.imgui-winit-support]

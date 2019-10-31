@@ -23,11 +23,7 @@ fn main() {
 
     // Set up window and GPU    
     let event_loop = EventLoop::new();
-    let (window, instance, mut size, surface, hidpi_factor) = {
-        use raw_window_handle::HasRawWindowHandle as _;
-
-        let instance = wgpu::Instance::new();
-
+    let (window, mut size, surface, hidpi_factor) = {
         let version = env!("CARGO_PKG_VERSION");
 
         let window = Window::new(&event_loop).unwrap();
@@ -38,16 +34,17 @@ fn main() {
             .inner_size()
             .to_physical(hidpi_factor);
 
-        let surface = instance.create_surface(window.raw_window_handle());
+        let surface = wgpu::Surface::create(&window);
 
-        (window, instance, size, surface, hidpi_factor)
+        (window, size, surface, hidpi_factor)
     };
 
-    let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions {
+    let adapter = wgpu::Adapter::request(&wgpu::RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::LowPower,
-    });
+        backends: wgpu::BackendBit::PRIMARY,
+    }).unwrap();
 
-    let mut device = adapter.request_device(&wgpu::DeviceDescriptor {
+    let (mut device, mut queue) = adapter.request_device(&wgpu::DeviceDescriptor {
         extensions: wgpu::Extensions {
             anisotropic_filtering: false,
         },
@@ -89,7 +86,7 @@ fn main() {
     // Set up dear imgui wgpu renderer
     // 
     let clear_color = wgpu::Color { r: 0.1, g: 0.2, b: 0.3, a: 1.0 };
-    let mut renderer = Renderer::new(&mut imgui, &mut device, sc_desc.format, Some(clear_color));
+    let mut renderer = Renderer::new(&mut imgui, &device, &mut queue, sc_desc.format, Some(clear_color));
 
     let mut last_frame = Instant::now();
     let mut demo_open = true;
@@ -182,9 +179,7 @@ fn main() {
                     .render(ui, &mut device, &mut encoder, &frame.view)
                     .expect("Rendering failed");
 
-                device
-                    .get_queue()
-                    .submit(&[encoder.finish()]);
+                queue.submit(&[encoder.finish()]);
             },
             _ => (),
         }

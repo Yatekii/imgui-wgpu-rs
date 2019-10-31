@@ -105,20 +105,22 @@ impl Renderer {
     /// Create an entirely new imgui wgpu renderer.
     pub fn new(
         imgui: &mut Context,
-        device: &mut Device,
+        device: &Device,
+        queue: &mut Queue,
         format: TextureFormat,
         clear_color: Option<Color>,
     ) -> Renderer {
         let (vs_code, fs_code) = Shaders::get_program_code();
         let vs_raw = Shaders::compile_glsl(vs_code, ShaderStage::Vertex);
         let fs_raw = Shaders::compile_glsl(fs_code, ShaderStage::Fragment);
-        Self::new_impl(imgui, device, format, clear_color, vs_raw, fs_raw)
+        Self::new_impl(imgui, device, queue, format, clear_color, vs_raw, fs_raw)
     }
 
     /// Create an entirely new imgui wgpu renderer, using prebuilt spirv shaders
     pub fn new_static(
         imgui: &mut Context,
-        device: &mut Device,
+        device: &Device,
+        queue: &mut Queue,
         format: TextureFormat,
         clear_color: Option<Color>,
     ) -> Renderer {
@@ -135,13 +137,14 @@ impl Renderer {
             words
         }
 
-        Self::new_impl(imgui, device, format, clear_color, compile(vs_bytes), compile(fs_bytes))
+        Self::new_impl(imgui, device, queue, format, clear_color, compile(vs_bytes), compile(fs_bytes))
     }
 
     /// Create an entirely new imgui wgpu renderer.
     fn new_impl(
         imgui: &mut Context,
-        device: &mut Device,
+        device: &Device,
+        queue: &mut Queue,
         format: TextureFormat,
         clear_color: Option<Color>,
         vs_raw: Vec<u32>,
@@ -284,7 +287,7 @@ impl Renderer {
         };
 
         // Immediately load the fon texture to the GPU.
-        renderer.reload_font_texture(imgui, device);
+        renderer.reload_font_texture(imgui, device, queue);
 
         renderer
     }
@@ -439,10 +442,10 @@ impl Renderer {
     /// Updates the texture on the GPU corresponding to the current imgui font atlas.
     /// 
     /// This has to be called after loading a font.
-    pub fn reload_font_texture(&mut self, imgui: &mut Context, device: &mut Device) {
+    pub fn reload_font_texture(&mut self, imgui: &mut Context, device: &Device, queue: &mut Queue) {
         let mut atlas = imgui.fonts();
         let handle = atlas.build_rgba32_texture();
-        let font_texture_id = self.upload_font_texture(device, &handle.data, handle.width, handle.height);
+        let font_texture_id = self.upload_font_texture(device, queue, &handle.data, handle.width, handle.height);
         
         atlas.tex_id = font_texture_id;
     }
@@ -450,7 +453,8 @@ impl Renderer {
     /// Creates and uploads a new wgpu texture made from the imgui font atlas.
     fn upload_font_texture(
         &mut self,
-        device: &mut Device,
+        device: &Device,
+        queue: &mut Queue,
         data: &[u8],
         width: u32,
         height: u32
@@ -505,9 +509,7 @@ impl Renderer {
         );
 
         // Resolve the actual copy process.
-        device
-            .get_queue()
-            .submit(&[encoder.finish()]);
+        queue.submit(&[encoder.finish()]);
 
         let texture = Texture::new(texture, &self.texture_layout, device);
         self.textures.insert(texture)
