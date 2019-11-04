@@ -12,7 +12,7 @@ For usage, please have a look at the [example](examples/hello_world.rs).
 
 Run the example with
 ```
-cargo run --release --example hello_world --features [vulkan|metal|dx12]
+cargo run --release --example hello_world
 ```
 
 # Status
