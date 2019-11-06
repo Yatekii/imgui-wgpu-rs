@@ -25,6 +25,7 @@ imgui = "0.2.0"
 winit = "0.20.0-alpha4"
 raw-window-handle = "0.3"
 env_logger = "0.5"
+image = "0.22"
 
 [dev-dependencies.imgui-winit-support]
 version = "0.2.0"

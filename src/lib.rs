@@ -47,13 +47,13 @@ impl Shaders {
 }
 
 /// A container for a bindable texture to be used internally.
-struct Texture {
+pub struct Texture {
     bind_group: BindGroup,
 }
 
 impl Texture {
     /// Creates a new imgui texture from a wgpu texture.
-    fn new(texture: wgpu::Texture, layout: &BindGroupLayout, device: &Device) -> Self {
+    pub fn new(texture: wgpu::Texture, layout: &BindGroupLayout, device: &Device) -> Self {
         // Extract the texture view.
         let view = texture.create_default_view();
 
@@ -445,13 +445,13 @@ impl Renderer {
     pub fn reload_font_texture(&mut self, imgui: &mut Context, device: &Device, queue: &mut Queue) {
         let mut atlas = imgui.fonts();
         let handle = atlas.build_rgba32_texture();
-        let font_texture_id = self.upload_font_texture(device, queue, &handle.data, handle.width, handle.height);
+        let font_texture_id = self.upload_texture(device, queue, &handle.data, handle.width, handle.height);
         
         atlas.tex_id = font_texture_id;
     }
 
     /// Creates and uploads a new wgpu texture made from the imgui font atlas.
-    fn upload_font_texture(
+    pub fn upload_texture(
         &mut self,
         device: &Device,
         queue: &mut Queue,
