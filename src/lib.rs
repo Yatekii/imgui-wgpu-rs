@@ -2,6 +2,7 @@ use std::mem::size_of;
 use imgui::{
     DrawList,
     Context,
+    DrawData,
     DrawVert,
     DrawIdx,
     TextureId,
@@ -293,14 +294,13 @@ impl Renderer {
     }
 
     /// Render the current imgui frame.
-    pub fn render<'a>(
+    pub fn render(
         &mut self,
-        ui: Ui<'a>,
+        draw_data: &DrawData,
         device: &Device,
         encoder: &mut CommandEncoder,
         view: &TextureView,
     ) -> RendererResult<()> {
-        let draw_data = ui.render();
         let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
         let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
         
