@@ -167,7 +167,7 @@ fn main() {
 
                 platform.prepare_render(&ui, &window);
                 renderer
-                    .render(ui, &mut device, &mut encoder, &frame.view)
+                    .render(ui.render(), &mut device, &mut encoder, &frame.view)
                     .expect("Rendering failed");
 
                 queue.submit(&[encoder.finish()]);
