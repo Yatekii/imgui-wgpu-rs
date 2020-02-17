@@ -7,7 +7,6 @@ use imgui::{
     DrawIdx,
     TextureId,
     Textures,
-    Ui,
     DrawCmd::Elements,
 };
 use wgpu::*;

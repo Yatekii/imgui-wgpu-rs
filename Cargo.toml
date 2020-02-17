@@ -1,6 +1,6 @@
 [package]
 name = "imgui-wgpu"
-version = "0.4.1"
+version = "0.5.0"
 authors = ["Noah Hüsser <yatekii@yatekii.ch>", "Steven Wittens <steven@acko.net>"]
 edition = "2018"
 description = "A wgpu render backend for imgui-rs."
@@ -19,10 +19,10 @@ default = []
 wgpu = "0.4"
 glsl-to-spirv = "0.1"
 log = "0.4"
-imgui = "0.2.0"
+imgui = "0.3"
 
 [dev-dependencies]
-winit = "0.20.0-alpha4"
+winit = "0.21"
 raw-window-handle = "0.3"
 env_logger = "0.5"
 image = "0.22"
