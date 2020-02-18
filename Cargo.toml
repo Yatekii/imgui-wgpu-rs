@@ -28,6 +28,6 @@ env_logger = "0.5"
 image = "0.22"
 
 [dev-dependencies.imgui-winit-support]
-version = "0.2.0"
+version = "0.3"
 default-features = false
 features = ["winit-20"]
