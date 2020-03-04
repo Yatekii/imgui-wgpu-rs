@@ -31,3 +31,6 @@ image = "0.22"
 version = "0.3"
 default-features = false
 features = ["winit-20"]
+
+[patch.crates-io]
+wgpu = { version = "0.4", git = "https://github.com/gfx-rs/wgpu-rs.git", rev = "2374b8e" }
