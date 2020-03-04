@@ -99,6 +99,8 @@ pub struct Renderer {
     textures: Textures<Texture>,
     texture_layout: BindGroupLayout,
     clear_color: Option<Color>,
+    index_buffers: Vec<Buffer>,
+    vertex_buffers: Vec<Buffer>,
 }
 
 impl Renderer {
@@ -284,6 +286,8 @@ impl Renderer {
             textures: Textures::new(),
             texture_layout,
             clear_color,
+            vertex_buffers: vec![],
+            index_buffers: vec![],
         };
 
         // Immediately load the fon texture to the GPU.
@@ -293,11 +297,11 @@ impl Renderer {
     }
 
     /// Render the current imgui frame.
-    pub fn render(
-        &mut self,
+    pub fn render<'r>(
+        &'r mut self,
         draw_data: &DrawData,
         device: &Device,
-        encoder: &mut CommandEncoder,
+        encoder: &'r mut CommandEncoder,
         view: &TextureView,
     ) -> RendererResult<()> {
         let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
@@ -334,15 +338,23 @@ impl Renderer {
         });
         rpass.set_pipeline(&self.pipeline);
         rpass.set_bind_group(0, &self.uniform_bind_group, &[]);
+
+        self.vertex_buffers.clear();
+        self.index_buffers.clear();
+        
+        for draw_list in draw_data.draw_lists() {
+            self.vertex_buffers.push(self.upload_vertex_buffer(device, draw_list.vtx_buffer()));
+            self.index_buffers.push(self.upload_index_buffer(device, draw_list.idx_buffer()));
+        }
         
         // Execute all the imgui render work.
-        for draw_list in draw_data.draw_lists() {
+        for (draw_list_buffers_index, draw_list) in draw_data.draw_lists().enumerate() {
             self.render_draw_list(
-                device,
                 &mut rpass,
                 &draw_list,
                 draw_data.display_pos,
-                draw_data.framebuffer_scale
+                draw_data.framebuffer_scale,
+                draw_list_buffers_index,
             )?;
         }
 
@@ -351,19 +363,18 @@ impl Renderer {
 
     /// Render a given `DrawList` from imgui onto a wgpu frame.
     fn render_draw_list<'render>(
-        &mut self,
-        device: &Device,
+        &'render self,
         rpass: &mut RenderPass<'render>,
         draw_list: &DrawList,
         clip_off: [f32; 2],
-        clip_scale: [f32; 2]
+        clip_scale: [f32; 2],
+        draw_list_buffers_index: usize,
     ) -> RendererResult<()> {
         let mut start = 0;
 
-        // Make sure the current buffers are uploaded to the GPU.
-        let vertex_buffer = self.upload_vertex_buffer(device, draw_list.vtx_buffer());
-        let index_buffer = self.upload_index_buffer(device, draw_list.idx_buffer());
-
+        let index_buffer = &self.index_buffers[draw_list_buffers_index];
+        let vertex_buffer = &self.vertex_buffers[draw_list_buffers_index];
+        
         // Make sure the current buffers are attached to the render pass.
         rpass.set_index_buffer(&index_buffer, 0);
         rpass.set_vertex_buffers(0, &[(&vertex_buffer, 0)]);
@@ -416,26 +427,24 @@ impl Renderer {
 
     /// Updates the current uniform buffer containing the transform matrix.
     fn update_uniform_buffer(&mut self, device: &Device, encoder: &mut CommandEncoder, matrix: &[[f32; 4]; 4]) {
+        let data = as_byte_slice(matrix);
         // Create a new buffer.
-        let buffer = device.create_buffer_mapped(16, BufferUsage::COPY_SRC)
-        .fill_from_slice(matrix.iter().flatten().map(|f| *f).collect::<Vec<f32>>().as_slice());
+        let buffer = device.create_buffer_with_data(data, BufferUsage::COPY_SRC);
         
         // Copy the new buffer to the real buffer.
         encoder.copy_buffer_to_buffer(&buffer, 0, &self.uniform_buffer, 0, 64);
     }
 
     /// Upload the vertex buffer to the gPU.
-    fn upload_vertex_buffer(&mut self, device: &Device, vertices: &[DrawVert]) -> Buffer {
-        device
-            .create_buffer_mapped(vertices.len(), BufferUsage::VERTEX)
-            .fill_from_slice(vertices)
+    fn upload_vertex_buffer(&self, device: &Device, vertices: &[DrawVert]) -> Buffer {
+        let data = as_byte_slice(&vertices);
+        device.create_buffer_with_data(data, BufferUsage::VERTEX)
     }
 
     /// Upload the index buffer to the GPU.
-    fn upload_index_buffer(&mut self, device: &Device, indices: &[DrawIdx]) -> Buffer {
-        device
-            .create_buffer_mapped(indices.len(), BufferUsage::INDEX)
-            .fill_from_slice(indices)
+    fn upload_index_buffer(&self, device: &Device, indices: &[DrawIdx]) -> Buffer {
+        let data = as_byte_slice(&indices);
+        device.create_buffer_with_data(data, BufferUsage::INDEX)
     }
 
     /// Updates the texture on the GPU corresponding to the current imgui font atlas.
@@ -471,11 +480,7 @@ impl Renderer {
 
         // Upload the actual data to a wgpu buffer.
         let bytes = data.len();
-        let buffer = device.create_buffer_mapped(
-            bytes,
-            BufferUsage::COPY_SRC,
-        )
-        .fill_from_slice(data);
+        let buffer = device.create_buffer_with_data(data, BufferUsage::COPY_SRC);
 
         // Make sure we have an active encoder.
         let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor {
@@ -495,9 +500,9 @@ impl Renderer {
                 mip_level: 0,
                 array_layer: 0,
                 origin: Origin3d {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
+                    x: 0,
+                    y: 0,
+                    z: 0,
                 },
             },
             Extent3d {
@@ -512,5 +517,13 @@ impl Renderer {
 
         let texture = Texture::new(texture, &self.texture_layout, device);
         self.textures.insert(texture)
+    }
+}
+
+fn as_byte_slice<T>(slice: &[T]) -> &[u8] {
+    let len = slice.len() * std::mem::size_of::<T>();
+    let ptr = slice.as_ptr() as *const u8;
+    unsafe {
+        std::slice::from_raw_parts(ptr, len)
     }
 }

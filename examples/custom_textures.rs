@@ -32,10 +32,12 @@ fn main() {
         (window, size, surface)
     };
 
-    let adapter = wgpu::Adapter::request(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::LowPower,
-        backends: wgpu::BackendBit::PRIMARY,
-    })
+    let adapter = wgpu::Adapter::request(
+        &wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::LowPower,
+        },
+        wgpu::BackendBit::PRIMARY,
+    )
     .unwrap();
 
     let (mut device, mut queue) = adapter.request_device(&wgpu::DeviceDescriptor {
@@ -159,7 +161,13 @@ fn main() {
                 let now = Instant::now();
                 last_frame = now;
 
-                let frame = swap_chain.get_next_texture();
+                let frame = match swap_chain.get_next_texture() {
+                    Ok(frame) => frame,
+                    Err(()) => {
+                        eprintln!("dropped frame");
+                        return;
+                    }
+                };
                 platform
                     .prepare_frame(imgui.io_mut(), &window)
                     .expect("Failed to prepare frame");
