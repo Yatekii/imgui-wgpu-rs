@@ -52,7 +52,7 @@ fn main() {
         format: wgpu::TextureFormat::Bgra8Unorm,
         width: size.width as u32,
         height: size.height as u32,
-        present_mode: wgpu::PresentMode::NoVsync,
+        present_mode: wgpu::PresentMode::Fifo,
     };
 
     let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
@@ -99,6 +99,8 @@ fn main() {
     let mut last_frame = Instant::now();
     let mut demo_open = true;
 
+    let mut last_cursor = None;
+
     // Event loop
     event_loop.run(move |event, _, control_flow| {
         *control_flow = if cfg!(feature = "metal-auto-capture") {
@@ -124,7 +126,7 @@ fn main() {
                     format: wgpu::TextureFormat::Bgra8Unorm,
                     width: size.width as u32,
                     height: size.height as u32,
-                    present_mode: wgpu::PresentMode::NoVsync,
+                    present_mode: wgpu::PresentMode::Fifo,
                 };
 
                 swap_chain = device.create_swap_chain(&surface, &sc_desc);
@@ -196,7 +198,10 @@ fn main() {
                 let mut encoder: wgpu::CommandEncoder =
                     device.create_command_encoder(&wgpu::CommandEncoderDescriptor { todo: 0 });
 
-                platform.prepare_render(&ui, &window);
+                if last_cursor != Some(ui.mouse_cursor()) {
+                    last_cursor = Some(ui.mouse_cursor());
+                    platform.prepare_render(&ui, &window);
+                }
                 renderer
                     .render(ui.render(), &mut device, &mut encoder, &frame.view)
                     .expect("Rendering failed");

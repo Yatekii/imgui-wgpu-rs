@@ -13,6 +13,10 @@ use wgpu::*;
 
 pub type RendererResult<T> = Result<T, RendererError>;
 
+// TODO: This value may change
+// https://github.com/gfx-rs/wgpu-rs/issues/199
+const WHOLE_BUFFER: u64 = 0;
+
 #[derive(Clone, Debug)]
 pub enum RendererError {
     BadTexture(TextureId),
@@ -67,7 +71,7 @@ impl Texture {
             mipmap_filter: FilterMode::Linear,
             lod_min_clamp: -100.0,
             lod_max_clamp: 100.0,
-            compare_function: CompareFunction::Always,
+            compare: Some(&CompareFunction::Always),
         });
 
         // Create the texture bind group from the layout.
@@ -166,7 +170,7 @@ impl Renderer {
         // Create the uniform matrix buffer bind group layout.
         let uniform_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             bindings: &[
-                BindGroupLayoutBinding {
+                BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStage::VERTEX,
                     ty: BindingType::UniformBuffer {
@@ -193,7 +197,7 @@ impl Renderer {
         // Create the texture layout for further usage.
         let texture_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             bindings: &[
-                BindGroupLayoutBinding {
+                BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStage::FRAGMENT,
                     ty: BindingType::SampledTexture {
@@ -201,10 +205,10 @@ impl Renderer {
                         dimension: TextureViewDimension::D2,
                     },
                 },
-                BindGroupLayoutBinding {
+                BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStage::FRAGMENT,
-                    ty: BindingType::Sampler,
+                    ty: BindingType::Sampler { comparison: false },
                 },
             ]
         });
@@ -376,8 +380,8 @@ impl Renderer {
         let vertex_buffer = &self.vertex_buffers[draw_list_buffers_index];
         
         // Make sure the current buffers are attached to the render pass.
-        rpass.set_index_buffer(&index_buffer, 0);
-        rpass.set_vertex_buffers(0, &[(&vertex_buffer, 0)]);
+        rpass.set_index_buffer(&index_buffer, 0, WHOLE_BUFFER);
+        rpass.set_vertex_buffer(0, &vertex_buffer, 0, WHOLE_BUFFER);
         
         for cmd in draw_list.commands() {
             match cmd {
@@ -492,8 +496,8 @@ impl Renderer {
             BufferCopyView {
                 buffer: &buffer,
                 offset: 0,
-                row_pitch: bytes as u32 / height,
-                image_height: height,
+                bytes_per_row: bytes as u32 / height,
+                rows_per_image: height,
             },
             TextureCopyView {
                 texture: &texture,
