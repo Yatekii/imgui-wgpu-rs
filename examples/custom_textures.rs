@@ -53,7 +53,7 @@ fn main() {
         format: wgpu::TextureFormat::Bgra8Unorm,
         width: size.width as u32,
         height: size.height as u32,
-        present_mode: wgpu::PresentMode::NoVsync,
+        present_mode: wgpu::PresentMode::Fifo,
     };
 
     let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
@@ -133,7 +133,7 @@ fn main() {
                     format: wgpu::TextureFormat::Bgra8Unorm,
                     width: size.width as u32,
                     height: size.height as u32,
-                    present_mode: wgpu::PresentMode::NoVsync,
+                    present_mode: wgpu::PresentMode::Fifo,
                 };
 
                 swap_chain = device.create_swap_chain(&surface, &sc_desc);
