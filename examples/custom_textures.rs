@@ -34,7 +34,7 @@ fn main() {
 
     let adapter = wgpu::Adapter::request(
         &wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::LowPower,
+            power_preference: wgpu::PowerPreference::HighPerformance,
         },
         wgpu::BackendBit::PRIMARY,
     )
@@ -53,7 +53,7 @@ fn main() {
         format: wgpu::TextureFormat::Bgra8Unorm,
         width: size.width as u32,
         height: size.height as u32,
-        present_mode: wgpu::PresentMode::Fifo,
+        present_mode: wgpu::PresentMode::Mailbox,
     };
 
     let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
@@ -133,7 +133,7 @@ fn main() {
                     format: wgpu::TextureFormat::Bgra8Unorm,
                     width: size.width as u32,
                     height: size.height as u32,
-                    present_mode: wgpu::PresentMode::Fifo,
+                    present_mode: wgpu::PresentMode::Mailbox,
                 };
 
                 swap_chain = device.create_swap_chain(&surface, &sc_desc);
@@ -158,8 +158,10 @@ fn main() {
                 *control_flow = ControlFlow::Exit;
             }
             Event::MainEventsCleared => {
-                let now = Instant::now();
-                last_frame = now;
+                window.request_redraw();
+            }
+            Event::RedrawEventsCleared => {
+                last_frame = imgui.io_mut().update_delta_time(last_frame);
 
                 let frame = match swap_chain.get_next_texture() {
                     Ok(frame) => frame,
