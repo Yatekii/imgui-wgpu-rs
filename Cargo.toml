@@ -26,6 +26,7 @@ winit = "0.21"
 raw-window-handle = "0.3"
 env_logger = "0.5"
 image = "0.22"
+futures = "0.3"
 
 [dev-dependencies.imgui-winit-support]
 version = "0.3"
@@ -33,4 +34,4 @@ default-features = false
 features = ["winit-20"]
 
 [patch.crates-io]
-wgpu = { version = "0.4", git = "https://github.com/gfx-rs/wgpu-rs.git", rev = "9a67ce1" }
+wgpu = { version = "0.4", git = "https://github.com/gfx-rs/wgpu-rs.git", rev = "7b15e24" }

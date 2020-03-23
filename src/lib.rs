@@ -202,6 +202,7 @@ impl Renderer {
                     visibility: wgpu::ShaderStage::FRAGMENT,
                     ty: BindingType::SampledTexture {
                         multisampled: false,
+                        component_type: TextureComponentType::Float,
                         dimension: TextureViewDimension::D2,
                     },
                 },
