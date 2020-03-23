@@ -1,3 +1,4 @@
+use futures::executor::block_on;
 use image::ImageFormat;
 use imgui::*;
 use imgui_wgpu::Renderer;
@@ -32,20 +33,20 @@ fn main() {
         (window, size, surface)
     };
 
-    let adapter = wgpu::Adapter::request(
+    let adapter = block_on(wgpu::Adapter::request(
         &wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
         },
         wgpu::BackendBit::PRIMARY,
-    )
+    ))
     .unwrap();
 
-    let (mut device, mut queue) = adapter.request_device(&wgpu::DeviceDescriptor {
+    let (mut device, mut queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor {
         extensions: wgpu::Extensions {
             anisotropic_filtering: false,
         },
         limits: wgpu::Limits::default(),
-    });
+    }));
 
     // Set up swap chain
     let mut sc_desc = wgpu::SwapChainDescriptor {
