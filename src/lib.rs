@@ -22,8 +22,10 @@ enum ShaderStage {
     Compute,
 }
 
+#[cfg(feature = "glsl-to-spirv")]
 struct Shaders;
 
+#[cfg(feature = "glsl-to-spirv")]
 impl Shaders {
     fn compile_glsl(code: &str, stage: ShaderStage) -> Vec<u32> {
         let ty = match stage {
@@ -97,8 +99,9 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    /// Create an entirely new imgui wgpu renderer.
-    pub fn new(
+    /// Create a new imgui wgpu renderer with newly compiled shaders.
+    #[cfg(feature = "glsl-to-spirv")]
+    pub fn new_glsl(
         imgui: &mut Context,
         device: &Device,
         queue: &mut Queue,
@@ -111,8 +114,8 @@ impl Renderer {
         Self::new_impl(imgui, device, queue, format, clear_color, vs_raw, fs_raw)
     }
 
-    /// Create an entirely new imgui wgpu renderer, using prebuilt spirv shaders
-    pub fn new_static(
+    /// Create a new imgui wgpu renderer, using prebuilt spirv shaders.
+    pub fn new(
         imgui: &mut Context,
         device: &Device,
         queue: &mut Queue,
@@ -141,6 +144,17 @@ impl Renderer {
             compile(vs_bytes),
             compile(fs_bytes),
         )
+    }
+
+    #[deprecated(note = "Renderer::new now uses static shaders by default")]
+    pub fn new_static(
+        imgui: &mut Context,
+        device: &Device,
+        queue: &mut Queue,
+        format: TextureFormat,
+        clear_color: Option<Color>,
+    ) -> Renderer {
+        Renderer::new(imgui, device, queue, format, clear_color)
     }
 
     /// Create an entirely new imgui wgpu renderer.
