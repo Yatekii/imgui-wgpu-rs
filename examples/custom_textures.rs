@@ -36,6 +36,7 @@ fn main() {
     let adapter = block_on(wgpu::Adapter::request(
         &wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
+            compatible_surface: Some(&surface),
         },
         wgpu::BackendBit::PRIMARY,
     ))
@@ -109,6 +110,8 @@ fn main() {
     let raw_data = image.into_raw();
     let lenna_texture_id = renderer.upload_texture(&device, &mut queue, &raw_data, width, height);
 
+    let mut last_cursor = None;
+    
     // Event loop
     event_loop.run(move |event, _, control_flow| {
         *control_flow = if cfg!(feature = "metal-auto-capture") {
@@ -166,8 +169,8 @@ fn main() {
 
                 let frame = match swap_chain.get_next_texture() {
                     Ok(frame) => frame,
-                    Err(()) => {
-                        eprintln!("dropped frame");
+                    Err(e) => {
+                        eprintln!("dropped frame: {:?}", e);
                         return;
                     }
                 };
@@ -189,9 +192,12 @@ fn main() {
                 }
 
                 let mut encoder: wgpu::CommandEncoder =
-                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { todo: 0 });
+                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-                platform.prepare_render(&ui, &window);
+                if last_cursor != Some(ui.mouse_cursor()) {
+                    last_cursor = Some(ui.mouse_cursor());
+                    platform.prepare_render(&ui, &window);
+                }
                 renderer
                     .render(ui.render(), &mut device, &mut encoder, &frame.view)
                     .expect("Rendering failed");

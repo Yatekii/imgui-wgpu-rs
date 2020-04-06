@@ -35,6 +35,7 @@ fn main() {
     let adapter = block_on(wgpu::Adapter::request(
         &wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
+            compatible_surface: Some(&surface),
         },
         wgpu::BackendBit::PRIMARY,
     ))
@@ -160,8 +161,8 @@ fn main() {
 
                 let frame = match swap_chain.get_next_texture() {
                     Ok(frame) => frame,
-                    Err(()) => {
-                        eprintln!("dropped frame");
+                    Err(e) => {
+                        eprintln!("dropped frame: {:?}", e);
                         return;
                     }
                 };
@@ -198,7 +199,7 @@ fn main() {
                 }
 
                 let mut encoder: wgpu::CommandEncoder =
-                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { todo: 0 });
+                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
                 if last_cursor != Some(ui.mouse_cursor()) {
                     last_cursor = Some(ui.mouse_cursor());
