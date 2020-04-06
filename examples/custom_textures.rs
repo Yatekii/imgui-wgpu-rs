@@ -111,7 +111,7 @@ fn main() {
     let lenna_texture_id = renderer.upload_texture(&device, &mut queue, &raw_data, width, height);
 
     let mut last_cursor = None;
-    
+
     // Event loop
     event_loop.run(move |event, _, control_flow| {
         *control_flow = if cfg!(feature = "metal-auto-capture") {
