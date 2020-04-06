@@ -90,7 +90,18 @@ fn main() {
         b: 0.3,
         a: 1.0,
     };
+
+    #[cfg(not(feature = "glsl-to-spirv"))]
     let mut renderer = Renderer::new(
+        &mut imgui,
+        &device,
+        &mut queue,
+        sc_desc.format,
+        Some(clear_color),
+    );
+
+    #[cfg(feature = "glsl-to-spirv")]
+    let mut renderer = Renderer::new_glsl(
         &mut imgui,
         &device,
         &mut queue,
