@@ -71,11 +71,12 @@ impl Texture {
             mipmap_filter: FilterMode::Linear,
             lod_min_clamp: -100.0,
             lod_max_clamp: 100.0,
-            compare: Some(&CompareFunction::Always),
+            compare: CompareFunction::Always,
         });
 
         // Create the texture bind group from the layout.
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: None,
             layout,
             bindings: &[
                 Binding {
@@ -163,12 +164,14 @@ impl Renderer {
         // Create the uniform matrix buffer.
         let size = 64;
         let uniform_buffer = device.create_buffer(&BufferDescriptor {
+            label: None,
             size,
             usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
         });
 
         // Create the uniform matrix buffer bind group layout.
         let uniform_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: None,
             bindings: &[
                 BindGroupLayoutEntry {
                     binding: 0,
@@ -182,6 +185,7 @@ impl Renderer {
 
         // Create the uniform matrix buffer bind group.
         let uniform_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: None,
             layout: &uniform_layout,
             bindings: &[
                 Binding {
@@ -196,6 +200,7 @@ impl Renderer {
 
         // Create the texture layout for further usage.
         let texture_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: None,
             bindings: &[
                 BindGroupLayoutEntry {
                     binding: 0,
@@ -255,30 +260,32 @@ impl Renderer {
                 },
             ],
             depth_stencil_state: None,
-            index_format: IndexFormat::Uint16,
-            vertex_buffers: &[
-                VertexBufferDescriptor {
-                    stride: size_of::<DrawVert>() as BufferAddress,
-                    step_mode: InputStepMode::Vertex,
-                    attributes: &[
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float2,
-                            shader_location: 0,
-                            offset: 0,
-                        },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float2,
-                            shader_location: 1,
-                            offset: 8,
-                        },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Uint,
-                            shader_location: 2,
-                            offset: 16,
-                        },
-                    ]
-                },
-            ],
+            vertex_state: VertexStateDescriptor {
+                index_format: IndexFormat::Uint16,
+                vertex_buffers: &[
+                    VertexBufferDescriptor {
+                        stride: size_of::<DrawVert>() as BufferAddress,
+                        step_mode: InputStepMode::Vertex,
+                        attributes: &[
+                            VertexAttributeDescriptor {
+                                format: VertexFormat::Float2,
+                                shader_location: 0,
+                                offset: 0,
+                            },
+                            VertexAttributeDescriptor {
+                                format: VertexFormat::Float2,
+                                shader_location: 1,
+                                offset: 8,
+                            },
+                            VertexAttributeDescriptor {
+                                format: VertexFormat::Uint,
+                                shader_location: 2,
+                                offset: 16,
+                            },
+                        ]
+                    },
+                ],
+            },
             sample_count: 1,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
@@ -322,11 +329,17 @@ impl Renderer {
 
         // Create and update the transform matrix for the current frame.
         // This is required to adapt to vulkan coordinates.
+        // let matrix = [
+        //     [2.0 / width, 0.0, 0.0, 0.0],
+        //     [0.0, 2.0 / height as f32, 0.0, 0.0],
+        //     [0.0, 0.0, -1.0, 0.0],
+        //     [-1.0, -1.0, 0.0, 1.0],
+        // ];
         let matrix = [
             [2.0 / width, 0.0, 0.0, 0.0],
-            [0.0, 2.0 / height as f32, 0.0, 0.0],
-            [0.0, 0.0, -1.0, 0.0],
-            [-1.0, -1.0, 0.0, 1.0],
+            [0.0, 2.0 / -height as f32, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [-1.0, 1.0, 0.0, 1.0],
         ];
         self.update_uniform_buffer(device, encoder, &matrix);
 
@@ -474,6 +487,7 @@ impl Renderer {
     ) -> TextureId {
         // Create the wgpu texture.
         let texture = device.create_texture(&TextureDescriptor {
+            label: None,
             size: Extent3d { width, height, depth: 1 },
             array_layer_count: 1,
             mip_level_count: 1,
@@ -489,7 +503,7 @@ impl Renderer {
 
         // Make sure we have an active encoder.
         let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor {
-            todo: 0,
+            label: None,
         });
 
         // Schedule a copy from the buffer to the texture.
