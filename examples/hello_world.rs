@@ -35,6 +35,7 @@ fn main() {
     let adapter = block_on(wgpu::Adapter::request(
         &wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
+            compatible_surface: Some(&surface),
         },
         wgpu::BackendBit::PRIMARY,
     ))
@@ -53,7 +54,7 @@ fn main() {
         format: wgpu::TextureFormat::Bgra8Unorm,
         width: size.width as u32,
         height: size.height as u32,
-        present_mode: wgpu::PresentMode::Mailbox,
+        present_mode: wgpu::PresentMode::Immediate,
     };
 
     let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
@@ -127,7 +128,7 @@ fn main() {
                     format: wgpu::TextureFormat::Bgra8Unorm,
                     width: size.width as u32,
                     height: size.height as u32,
-                    present_mode: wgpu::PresentMode::Mailbox,
+                    present_mode: wgpu::PresentMode::Immediate,
                 };
 
                 swap_chain = device.create_swap_chain(&surface, &sc_desc);
@@ -151,17 +152,15 @@ fn main() {
             } => {
                 *control_flow = ControlFlow::Exit;
             }
-            Event::MainEventsCleared => {
-                window.request_redraw()
-            }
+            Event::MainEventsCleared => window.request_redraw(),
             Event::RedrawEventsCleared => {
                 let delta_s = last_frame.elapsed();
                 last_frame = imgui.io_mut().update_delta_time(last_frame);
 
                 let frame = match swap_chain.get_next_texture() {
                     Ok(frame) => frame,
-                    Err(()) => {
-                        eprintln!("dropped frame");
+                    Err(_) => {
+                        eprintln!("swapchain timed out");
                         return;
                     }
                 };
@@ -198,7 +197,9 @@ fn main() {
                 }
 
                 let mut encoder: wgpu::CommandEncoder =
-                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { todo: 0 });
+                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("render encoder"),
+                    });
 
                 if last_cursor != Some(ui.mouse_cursor()) {
                     last_cursor = Some(ui.mouse_cursor());

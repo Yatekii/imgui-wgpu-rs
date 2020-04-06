@@ -1,14 +1,7 @@
-use std::mem::size_of;
 use imgui::{
-    DrawList,
-    Context,
-    DrawData,
-    DrawVert,
-    DrawIdx,
-    TextureId,
-    Textures,
-    DrawCmd::Elements,
+    Context, DrawCmd::Elements, DrawData, DrawIdx, DrawList, DrawVert, TextureId, Textures,
 };
+use std::mem::size_of;
 use wgpu::*;
 
 pub type RendererResult<T> = Result<T, RendererError>;
@@ -43,10 +36,7 @@ impl Shaders {
     }
 
     fn get_program_code() -> (&'static str, &'static str) {
-        (
-            include_str!("imgui.vert"),
-            include_str!("imgui.frag"),
-        )
+        (include_str!("imgui.vert"), include_str!("imgui.frag"))
     }
 }
 
@@ -71,7 +61,7 @@ impl Texture {
             mipmap_filter: FilterMode::Linear,
             lod_min_clamp: -100.0,
             lod_max_clamp: 100.0,
-            compare: Some(&CompareFunction::Always),
+            compare: CompareFunction::Always,
         });
 
         // Create the texture bind group from the layout.
@@ -86,12 +76,11 @@ impl Texture {
                     binding: 1,
                     resource: BindingResource::Sampler(&sampler),
                 },
-            ]
+            ],
+            label: Some("imgui texture"),
         });
 
-        Texture {
-            bind_group,
-        }
+        Texture { bind_group }
     }
 }
 
@@ -143,7 +132,15 @@ impl Renderer {
             words
         }
 
-        Self::new_impl(imgui, device, queue, format, clear_color, compile(vs_bytes), compile(fs_bytes))
+        Self::new_impl(
+            imgui,
+            device,
+            queue,
+            format,
+            clear_color,
+            compile(vs_bytes),
+            compile(fs_bytes),
+        )
     }
 
     /// Create an entirely new imgui wgpu renderer.
@@ -165,33 +162,30 @@ impl Renderer {
         let uniform_buffer = device.create_buffer(&BufferDescriptor {
             size,
             usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+            label: Some("imgui matrix buffer"),
         });
 
         // Create the uniform matrix buffer bind group layout.
         let uniform_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            bindings: &[
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStage::VERTEX,
-                    ty: BindingType::UniformBuffer {
-                        dynamic: false,
-                    },
-                },
-            ]
+            bindings: &[BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStage::VERTEX,
+                ty: BindingType::UniformBuffer { dynamic: false },
+            }],
+            label: Some("imgui vertex bind group layout"),
         });
 
         // Create the uniform matrix buffer bind group.
         let uniform_bind_group = device.create_bind_group(&BindGroupDescriptor {
             layout: &uniform_layout,
-            bindings: &[
-                Binding {
+            bindings: &[Binding {
                 binding: 0,
-                    resource: BindingResource::Buffer {
-                        buffer: &uniform_buffer,
-                        range: 0..size,
-                    },
+                resource: BindingResource::Buffer {
+                    buffer: &uniform_buffer,
+                    range: 0..size,
                 },
-            ]
+            }],
+            label: Some("imgui vertex bind group"),
         });
 
         // Create the texture layout for further usage.
@@ -211,7 +205,8 @@ impl Renderer {
                     visibility: wgpu::ShaderStage::FRAGMENT,
                     ty: BindingType::Sampler { comparison: false },
                 },
-            ]
+            ],
+            label: Some("imgui texture bind group layout"),
         });
 
         // Create the render pipeline layout.
@@ -238,26 +233,24 @@ impl Renderer {
                 depth_bias_clamp: 0.0,
             }),
             primitive_topology: PrimitiveTopology::TriangleList,
-            color_states: &[
-                ColorStateDescriptor {
-                    format,
-                    color_blend: BlendDescriptor {
-                        src_factor: BlendFactor::SrcAlpha,
-                        dst_factor: BlendFactor::OneMinusSrcAlpha,
-                        operation: BlendOperation::Add,
-                    },
-                    alpha_blend: BlendDescriptor {
-                        src_factor: BlendFactor::OneMinusDstAlpha,
-                        dst_factor: BlendFactor::One,
-                        operation: BlendOperation::Add,
-                    },
-                    write_mask: ColorWrite::ALL,
+            color_states: &[ColorStateDescriptor {
+                format,
+                color_blend: BlendDescriptor {
+                    src_factor: BlendFactor::SrcAlpha,
+                    dst_factor: BlendFactor::OneMinusSrcAlpha,
+                    operation: BlendOperation::Add,
                 },
-            ],
+                alpha_blend: BlendDescriptor {
+                    src_factor: BlendFactor::OneMinusDstAlpha,
+                    dst_factor: BlendFactor::One,
+                    operation: BlendOperation::Add,
+                },
+                write_mask: ColorWrite::ALL,
+            }],
             depth_stencil_state: None,
-            index_format: IndexFormat::Uint16,
-            vertex_buffers: &[
-                VertexBufferDescriptor {
+            vertex_state: VertexStateDescriptor {
+                index_format: IndexFormat::Uint16,
+                vertex_buffers: &[VertexBufferDescriptor {
                     stride: size_of::<DrawVert>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
                     attributes: &[
@@ -276,9 +269,9 @@ impl Renderer {
                             shader_location: 2,
                             offset: 16,
                         },
-                    ]
-                },
-            ],
+                    ],
+                }],
+            },
             sample_count: 1,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
@@ -311,7 +304,7 @@ impl Renderer {
     ) -> RendererResult<()> {
         let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
         let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
-        
+
         // If the render area is <= 0, exit here and now.
         if !(fb_width > 0.0 && fb_height > 0.0) {
             return Ok(());
@@ -324,9 +317,9 @@ impl Renderer {
         // This is required to adapt to vulkan coordinates.
         let matrix = [
             [2.0 / width, 0.0, 0.0, 0.0],
-            [0.0, 2.0 / height as f32, 0.0, 0.0],
-            [0.0, 0.0, -1.0, 0.0],
-            [-1.0, -1.0, 0.0, 1.0],
+            [0.0, -2.0 / height as f32, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [-1.0, 1.0, 0.0, 1.0],
         ];
         self.update_uniform_buffer(device, encoder, &matrix);
 
@@ -335,9 +328,17 @@ impl Renderer {
             color_attachments: &[RenderPassColorAttachmentDescriptor {
                 attachment: &view,
                 resolve_target: None,
-                load_op: match self.clear_color { Some(_) => LoadOp::Clear, _ => LoadOp::Load },
+                load_op: match self.clear_color {
+                    Some(_) => LoadOp::Clear,
+                    _ => LoadOp::Load,
+                },
                 store_op: StoreOp::Store,
-                clear_color: self.clear_color.unwrap_or(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }),
+                clear_color: self.clear_color.unwrap_or(Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
             }],
             depth_stencil_attachment: None,
         });
@@ -346,12 +347,14 @@ impl Renderer {
 
         self.vertex_buffers.clear();
         self.index_buffers.clear();
-        
+
         for draw_list in draw_data.draw_lists() {
-            self.vertex_buffers.push(self.upload_vertex_buffer(device, draw_list.vtx_buffer()));
-            self.index_buffers.push(self.upload_index_buffer(device, draw_list.idx_buffer()));
+            self.vertex_buffers
+                .push(self.upload_vertex_buffer(device, draw_list.vtx_buffer()));
+            self.index_buffers
+                .push(self.upload_index_buffer(device, draw_list.idx_buffer()));
         }
-        
+
         // Execute all the imgui render work.
         for (draw_list_buffers_index, draw_list) in draw_data.draw_lists().enumerate() {
             self.render_draw_list(
@@ -379,14 +382,14 @@ impl Renderer {
 
         let index_buffer = &self.index_buffers[draw_list_buffers_index];
         let vertex_buffer = &self.vertex_buffers[draw_list_buffers_index];
-        
+
         // Make sure the current buffers are attached to the render pass.
         rpass.set_index_buffer(&index_buffer, 0, WHOLE_BUFFER);
         rpass.set_vertex_buffer(0, &vertex_buffer, 0, WHOLE_BUFFER);
-        
+
         for cmd in draw_list.commands() {
             match cmd {
-                Elements { count, cmd_params, } => {
+                Elements { count, cmd_params } => {
                     let clip_rect = [
                         (cmd_params.clip_rect[0] - clip_off[0]) * clip_scale[0],
                         (cmd_params.clip_rect[1] - clip_off[1]) * clip_scale[1],
@@ -404,18 +407,10 @@ impl Renderer {
 
                     // Set scissors on the renderpass.
                     let scissors = (
-                        clip_rect[0]
-                            .max(0.0)
-                            .floor() as u32,
-                        clip_rect[1]
-                            .max(0.0)
-                            .floor() as u32,
-                        (clip_rect[2] - clip_rect[0])
-                            .abs()
-                            .ceil() as u32,
-                        (clip_rect[3] - clip_rect[1])
-                            .abs()
-                            .ceil() as u32,
+                        clip_rect[0].max(0.0).floor() as u32,
+                        clip_rect[1].max(0.0).floor() as u32,
+                        (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
+                        (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
                     );
                     rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
 
@@ -423,19 +418,24 @@ impl Renderer {
                     let end = start + count as u32;
                     rpass.draw_indexed(start..end, 0, 0..1);
                     start = end;
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
         Ok(())
     }
 
     /// Updates the current uniform buffer containing the transform matrix.
-    fn update_uniform_buffer(&mut self, device: &Device, encoder: &mut CommandEncoder, matrix: &[[f32; 4]; 4]) {
+    fn update_uniform_buffer(
+        &mut self,
+        device: &Device,
+        encoder: &mut CommandEncoder,
+        matrix: &[[f32; 4]; 4],
+    ) {
         let data = as_byte_slice(matrix);
         // Create a new buffer.
         let buffer = device.create_buffer_with_data(data, BufferUsage::COPY_SRC);
-        
+
         // Copy the new buffer to the real buffer.
         encoder.copy_buffer_to_buffer(&buffer, 0, &self.uniform_buffer, 0, 64);
     }
@@ -453,13 +453,14 @@ impl Renderer {
     }
 
     /// Updates the texture on the GPU corresponding to the current imgui font atlas.
-    /// 
+    ///
     /// This has to be called after loading a font.
     pub fn reload_font_texture(&mut self, imgui: &mut Context, device: &Device, queue: &mut Queue) {
         let mut atlas = imgui.fonts();
         let handle = atlas.build_rgba32_texture();
-        let font_texture_id = self.upload_texture(device, queue, &handle.data, handle.width, handle.height);
-        
+        let font_texture_id =
+            self.upload_texture(device, queue, &handle.data, handle.width, handle.height);
+
         atlas.tex_id = font_texture_id;
     }
 
@@ -470,17 +471,22 @@ impl Renderer {
         queue: &mut Queue,
         data: &[u8],
         width: u32,
-        height: u32
+        height: u32,
     ) -> TextureId {
         // Create the wgpu texture.
         let texture = device.create_texture(&TextureDescriptor {
-            size: Extent3d { width, height, depth: 1 },
+            size: Extent3d {
+                width,
+                height,
+                depth: 1,
+            },
             array_layer_count: 1,
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
             format: TextureFormat::Rgba8Unorm,
             usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
+            label: Some("imgui texture"),
         });
 
         // Upload the actual data to a wgpu buffer.
@@ -489,7 +495,7 @@ impl Renderer {
 
         // Make sure we have an active encoder.
         let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor {
-            todo: 0,
+            label: Some("imgui texture upload encoder"),
         });
 
         // Schedule a copy from the buffer to the texture.
@@ -504,11 +510,7 @@ impl Renderer {
                 texture: &texture,
                 mip_level: 0,
                 array_layer: 0,
-                origin: Origin3d {
-                    x: 0,
-                    y: 0,
-                    z: 0,
-                },
+                origin: Origin3d { x: 0, y: 0, z: 0 },
             },
             Extent3d {
                 width,
@@ -528,7 +530,5 @@ impl Renderer {
 fn as_byte_slice<T>(slice: &[T]) -> &[u8] {
     let len = slice.len() * std::mem::size_of::<T>();
     let ptr = slice.as_ptr() as *const u8;
-    unsafe {
-        std::slice::from_raw_parts(ptr, len)
-    }
+    unsafe { std::slice::from_raw_parts(ptr, len) }
 }
