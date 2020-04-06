@@ -152,9 +152,7 @@ fn main() {
             } => {
                 *control_flow = ControlFlow::Exit;
             }
-            Event::MainEventsCleared => {
-                window.request_redraw()
-            }
+            Event::MainEventsCleared => window.request_redraw(),
             Event::RedrawEventsCleared => {
                 let delta_s = last_frame.elapsed();
                 last_frame = imgui.io_mut().update_delta_time(last_frame);
