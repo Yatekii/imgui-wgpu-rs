@@ -17,6 +17,6 @@ cargo run --release --example hello_world
 
 # Status
 
-Basic features are useable. Uses `wgpu-0.3.0` and `winit-0.20.0-alpha3` as well as `imgui-0.2.0` upstream.
+Basic features are useable. Uses `wgpu-0.5.0` and `imgui-0.3.0` upstream. `winit-0.21` is used with the examples.
 
 Contributions are very welcome.
