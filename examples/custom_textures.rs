@@ -104,7 +104,7 @@ fn main() {
     // Set up Lenna texture
     let lenna_bytes = include_bytes!("../resources/Lenna.jpg");
     let image =
-        image::load_from_memory_with_format(lenna_bytes, ImageFormat::JPEG).expect("inavlid image");
+        image::load_from_memory_with_format(lenna_bytes, ImageFormat::Jpeg).expect("invalid image");
     let image = image.to_rgba();
     let (width, height) = image.dimensions();
     let raw_data = image.into_raw();
