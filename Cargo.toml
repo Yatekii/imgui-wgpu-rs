@@ -19,19 +19,19 @@ default = []
 wgpu = "0.5"
 glsl-to-spirv = { version = "0.1", optional = true }
 log = "0.4"
-imgui = "0.3"
+imgui = "0.4"
 
 [dev-dependencies]
-winit = "0.21"
+winit = "0.22"
 raw-window-handle = "0.3"
-env_logger = "0.5"
-image = "0.22"
+env_logger = "0.7"
+image = "0.23"
 futures = "0.3"
 
 [dev-dependencies.imgui-winit-support]
-version = "0.3"
+version = "0.4"
 default-features = false
-features = ["winit-20"]
+features = ["winit-22"]
 
 [package.metadata.docs.rs]
 all-features = true
