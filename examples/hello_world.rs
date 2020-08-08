@@ -96,7 +96,7 @@ fn main() {
     };
 
     #[cfg(not(feature = "glsl-to-spirv"))]
-    let mut renderer = Renderer::new(&mut imgui, &device, &mut queue, sc_desc.format);
+    let mut renderer = Renderer::new(&mut imgui, &device, &mut queue, sc_desc.format, None, 1);
 
     #[cfg(feature = "glsl-to-spirv")]
     let mut renderer = Renderer::new_glsl(&mut imgui, &device, &mut queue, sc_desc.format);

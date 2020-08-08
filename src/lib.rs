@@ -129,11 +129,22 @@ impl Renderer {
         device: &Device,
         queue: &Queue,
         format: TextureFormat,
+        sample_count: u32,
+        depth_format: Option<TextureFormat>,
     ) -> Renderer {
         let (vs_code, fs_code) = Shaders::get_program_code();
         let vs_raw = Shaders::compile_glsl(vs_code, ShaderStage::Vertex);
         let fs_raw = Shaders::compile_glsl(fs_code, ShaderStage::Fragment);
-        Self::new_impl(imgui, device, queue, format, vs_raw, fs_raw)
+        Self::new_impl(
+            imgui,
+            device,
+            queue,
+            format,
+            vs_raw,
+            fs_raw,
+            depth_format,
+            sample_count,
+        )
     }
 
     /// Create a new imgui wgpu renderer, using prebuilt spirv shaders.
@@ -142,11 +153,22 @@ impl Renderer {
         device: &Device,
         queue: &Queue,
         format: TextureFormat,
+        depth_format: Option<TextureFormat>,
+        sample_count: u32,
     ) -> Renderer {
         let vs_bytes = include_spirv!("imgui.vert.spv");
         let fs_bytes = include_spirv!("imgui.frag.spv");
 
-        Self::new_impl(imgui, device, queue, format, vs_bytes, fs_bytes)
+        Self::new_impl(
+            imgui,
+            device,
+            queue,
+            format,
+            vs_bytes,
+            fs_bytes,
+            depth_format,
+            sample_count,
+        )
     }
 
     #[deprecated(note = "Renderer::new now uses static shaders by default")]
@@ -155,8 +177,10 @@ impl Renderer {
         device: &Device,
         queue: &Queue,
         format: TextureFormat,
+        depth_format: Option<TextureFormat>,
+        sample_count: u32,
     ) -> Renderer {
-        Renderer::new(imgui, device, queue, format)
+        Renderer::new(imgui, device, queue, format, depth_format, sample_count)
     }
 
     /// Create an entirely new imgui wgpu renderer.
@@ -167,6 +191,8 @@ impl Renderer {
         format: TextureFormat,
         vs_raw: ShaderModuleSource<'_>,
         fs_raw: ShaderModuleSource<'_>,
+        depth_format: Option<TextureFormat>,
+        sample_count: u32,
     ) -> Renderer {
         // Load shaders.
         let vs_module = device.create_shader_module(vs_raw);
@@ -270,7 +296,12 @@ impl Renderer {
                 },
                 write_mask: ColorWrite::ALL,
             }],
-            depth_stencil_state: None,
+            depth_stencil_state: depth_format.map(|format| wgpu::DepthStencilStateDescriptor {
+                format,
+                depth_write_enabled: false,
+                depth_compare: wgpu::CompareFunction::Always,
+                stencil: wgpu::StencilStateDescriptor::default(),
+            }),
             vertex_state: VertexStateDescriptor {
                 index_format: IndexFormat::Uint16,
                 vertex_buffers: &[VertexBufferDescriptor {
@@ -279,7 +310,7 @@ impl Renderer {
                     attributes: &vertex_attr_array![0 => Float2, 1 => Float2, 2 => Uint],
                 }],
             },
-            sample_count: 1,
+            sample_count,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
         });
