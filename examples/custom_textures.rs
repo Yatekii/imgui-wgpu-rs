@@ -95,7 +95,7 @@ fn main() {
         b: 0.3,
         a: 1.0,
     };
-    let mut renderer = Renderer::new(&mut imgui, &device, &mut queue, sc_desc.format);
+    let mut renderer = Renderer::new(&mut imgui, &device, &mut queue, sc_desc.format, None, 1);
 
     let mut last_frame = Instant::now();
 
