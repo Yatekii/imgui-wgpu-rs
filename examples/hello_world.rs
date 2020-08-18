@@ -11,11 +11,14 @@ use winit::{
 };
 
 fn main() {
-    env_logger::init();
+    wgpu_subscriber::initialize_default_subscriber(None);
 
     // Set up window and GPU
     let event_loop = EventLoop::new();
     let mut hidpi_factor = 1.0;
+
+    let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
+
     let (window, mut size, surface) = {
         let version = env!("CARGO_PKG_VERSION");
 
@@ -27,26 +30,26 @@ fn main() {
         window.set_title(&format!("imgui-wgpu {}", version));
         let size = window.inner_size();
 
-        let surface = wgpu::Surface::create(&window);
+        let surface = unsafe { instance.create_surface(&window) };
 
         (window, size, surface)
     };
 
-    let adapter = block_on(wgpu::Adapter::request(
-        &wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            compatible_surface: Some(&surface),
-        },
-        wgpu::BackendBit::PRIMARY,
-    ))
+    let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+        power_preference: wgpu::PowerPreference::HighPerformance,
+        compatible_surface: Some(&surface),
+    }))
     .unwrap();
 
-    let (mut device, mut queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-        extensions: wgpu::Extensions {
-            anisotropic_filtering: false,
+    let (device, mut queue) = block_on(adapter.request_device(
+        &wgpu::DeviceDescriptor {
+            features: wgpu::Features::empty(),
+            limits: wgpu::Limits::default(),
+            shader_validation: false,
         },
-        limits: wgpu::Limits::default(),
-    }));
+        None,
+    ))
+    .unwrap();
 
     // Set up swap chain
     let mut sc_desc = wgpu::SwapChainDescriptor {
@@ -92,22 +95,10 @@ fn main() {
     };
 
     #[cfg(not(feature = "glsl-to-spirv"))]
-    let mut renderer = Renderer::new(
-        &mut imgui,
-        &device,
-        &mut queue,
-        sc_desc.format,
-        Some(clear_color),
-    );
+    let mut renderer = Renderer::new(&mut imgui, &device, &mut queue, sc_desc.format);
 
     #[cfg(feature = "glsl-to-spirv")]
-    let mut renderer = Renderer::new_glsl(
-        &mut imgui,
-        &device,
-        &mut queue,
-        sc_desc.format,
-        Some(clear_color),
-    );
+    let mut renderer = Renderer::new_glsl(&mut imgui, &device, &mut queue, sc_desc.format);
 
     let mut last_frame = Instant::now();
     let mut demo_open = true;
@@ -168,7 +159,7 @@ fn main() {
                 let delta_s = last_frame.elapsed();
                 last_frame = imgui.io_mut().update_delta_time(last_frame);
 
-                let frame = match swap_chain.get_next_texture() {
+                let frame = match swap_chain.get_current_frame() {
                     Ok(frame) => frame,
                     Err(e) => {
                         eprintln!("dropped frame: {:?}", e);
@@ -214,11 +205,26 @@ fn main() {
                     last_cursor = Some(ui.mouse_cursor());
                     platform.prepare_render(&ui, &window);
                 }
+
+                let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                        attachment: &frame.output.view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(clear_color),
+                            store: true,
+                        },
+                    }],
+                    depth_stencil_attachment: None,
+                });
+
                 renderer
-                    .render(ui.render(), &mut device, &mut encoder, &frame.view)
+                    .render(ui.render(), &queue, &device, &mut rpass)
                     .expect("Rendering failed");
 
-                queue.submit(&[encoder.finish()]);
+                drop(rpass);
+
+                queue.submit(Some(encoder.finish()));
             }
             _ => (),
         }
