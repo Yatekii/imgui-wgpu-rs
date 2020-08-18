@@ -1,14 +1,19 @@
 use imgui::{
     Context, DrawCmd::Elements, DrawData, DrawIdx, DrawList, DrawVert, TextureId, Textures,
 };
+use smallvec::SmallVec;
 use std::mem::size_of;
+use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
 pub type RendererResult<T> = Result<T, RendererError>;
 
-// TODO: This value may change
-// https://github.com/gfx-rs/wgpu-rs/issues/199
-const WHOLE_BUFFER: u64 = 0;
+#[repr(transparent)]
+#[derive(Debug, Copy, Clone)]
+struct DrawVertPod(DrawVert);
+
+unsafe impl bytemuck::Zeroable for DrawVertPod {}
+unsafe impl bytemuck::Pod for DrawVertPod {}
 
 #[derive(Clone, Debug)]
 pub enum RendererError {
@@ -27,14 +32,26 @@ struct Shaders;
 
 #[cfg(feature = "glsl-to-spirv")]
 impl Shaders {
-    fn compile_glsl(code: &str, stage: ShaderStage) -> Vec<u32> {
+    fn compile_glsl(code: &str, stage: ShaderStage) -> ShaderModuleSource<'static> {
+        use std::io::Read as _;
+
         let ty = match stage {
             ShaderStage::Vertex => glsl_to_spirv::ShaderType::Vertex,
             ShaderStage::Fragment => glsl_to_spirv::ShaderType::Fragment,
             ShaderStage::Compute => glsl_to_spirv::ShaderType::Compute,
         };
 
-        read_spirv(glsl_to_spirv::compile(&code, ty).unwrap()).unwrap()
+        let mut data = Vec::new();
+        glsl_to_spirv::compile(&code, ty)
+            .unwrap()
+            .read_to_end(&mut data)
+            .unwrap();
+        let source = util::make_spirv(&data);
+        if let ShaderModuleSource::SpirV(cow) = source {
+            ShaderModuleSource::SpirV(std::borrow::Cow::Owned(cow.into()))
+        } else {
+            unreachable!()
+        }
     }
 
     fn get_program_code() -> (&'static str, &'static str) {
@@ -49,12 +66,18 @@ pub struct Texture {
 
 impl Texture {
     /// Creates a new imgui texture from a wgpu texture.
-    pub fn new(texture: wgpu::Texture, layout: &BindGroupLayout, device: &Device) -> Self {
+    pub fn new(
+        texture: wgpu::Texture,
+        layout: &BindGroupLayout,
+        device: &Device,
+        label: Option<&str>,
+    ) -> Self {
         // Extract the texture view.
-        let view = texture.create_default_view();
+        let view = texture.create_view(&TextureViewDescriptor::default());
 
         // Create the texture sampler.
         let sampler = device.create_sampler(&SamplerDescriptor {
+            label: Some("imgui-wgpu sampler"),
             address_mode_u: AddressMode::ClampToEdge,
             address_mode_v: AddressMode::ClampToEdge,
             address_mode_w: AddressMode::ClampToEdge,
@@ -63,19 +86,20 @@ impl Texture {
             mipmap_filter: FilterMode::Linear,
             lod_min_clamp: -100.0,
             lod_max_clamp: 100.0,
-            compare: CompareFunction::Always,
+            compare: None,
+            anisotropy_clamp: None,
         });
 
         // Create the texture bind group from the layout.
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: None,
+            label,
             layout,
-            bindings: &[
-                Binding {
+            entries: &[
+                BindGroupEntry {
                     binding: 0,
                     resource: BindingResource::TextureView(&view),
                 },
-                Binding {
+                BindGroupEntry {
                     binding: 1,
                     resource: BindingResource::Sampler(&sampler),
                 },
@@ -86,16 +110,14 @@ impl Texture {
     }
 }
 
-#[allow(dead_code)]
 pub struct Renderer {
     pipeline: RenderPipeline,
     uniform_buffer: Buffer,
     uniform_bind_group: BindGroup,
     textures: Textures<Texture>,
     texture_layout: BindGroupLayout,
-    clear_color: Option<Color>,
-    index_buffers: Vec<Buffer>,
-    vertex_buffers: Vec<Buffer>,
+    index_buffers: SmallVec<[Buffer; 4]>,
+    vertex_buffers: SmallVec<[Buffer; 4]>,
 }
 
 impl Renderer {
@@ -106,12 +128,11 @@ impl Renderer {
         device: &Device,
         queue: &Queue,
         format: TextureFormat,
-        clear_color: Option<Color>,
     ) -> Renderer {
         let (vs_code, fs_code) = Shaders::get_program_code();
         let vs_raw = Shaders::compile_glsl(vs_code, ShaderStage::Vertex);
         let fs_raw = Shaders::compile_glsl(fs_code, ShaderStage::Fragment);
-        Self::new_impl(imgui, device, queue, format, clear_color, vs_raw, fs_raw)
+        Self::new_impl(imgui, device, queue, format, vs_raw, fs_raw)
     }
 
     /// Create a new imgui wgpu renderer, using prebuilt spirv shaders.
@@ -120,30 +141,11 @@ impl Renderer {
         device: &Device,
         queue: &Queue,
         format: TextureFormat,
-        clear_color: Option<Color>,
     ) -> Renderer {
-        let vs_bytes = include_bytes!("imgui.vert.spv");
-        let fs_bytes = include_bytes!("imgui.frag.spv");
+        let vs_bytes = include_spirv!("imgui.vert.spv");
+        let fs_bytes = include_spirv!("imgui.frag.spv");
 
-        fn compile(shader: &[u8]) -> Vec<u32> {
-            let mut words = vec![];
-            for bytes4 in shader.chunks(4) {
-                words.push(u32::from_le_bytes([
-                    bytes4[0], bytes4[1], bytes4[2], bytes4[3],
-                ]));
-            }
-            words
-        }
-
-        Self::new_impl(
-            imgui,
-            device,
-            queue,
-            format,
-            clear_color,
-            compile(vs_bytes),
-            compile(fs_bytes),
-        )
+        Self::new_impl(imgui, device, queue, format, vs_bytes, fs_bytes)
     }
 
     #[deprecated(note = "Renderer::new now uses static shaders by default")]
@@ -152,9 +154,8 @@ impl Renderer {
         device: &Device,
         queue: &Queue,
         format: TextureFormat,
-        clear_color: Option<Color>,
     ) -> Renderer {
-        Renderer::new(imgui, device, queue, format, clear_color)
+        Renderer::new(imgui, device, queue, format)
     }
 
     /// Create an entirely new imgui wgpu renderer.
@@ -163,49 +164,50 @@ impl Renderer {
         device: &Device,
         queue: &Queue,
         format: TextureFormat,
-        clear_color: Option<Color>,
-        vs_raw: Vec<u32>,
-        fs_raw: Vec<u32>,
+        vs_raw: ShaderModuleSource<'_>,
+        fs_raw: ShaderModuleSource<'_>,
     ) -> Renderer {
         // Load shaders.
-        let vs_module = device.create_shader_module(&vs_raw);
-        let fs_module = device.create_shader_module(&fs_raw);
+        let vs_module = device.create_shader_module(vs_raw);
+        let fs_module = device.create_shader_module(fs_raw);
 
         // Create the uniform matrix buffer.
         let size = 64;
         let uniform_buffer = device.create_buffer(&BufferDescriptor {
-            label: None,
+            label: Some("imgui-wgpu uniform buffer"),
             size,
             usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+            mapped_at_creation: false,
         });
 
         // Create the uniform matrix buffer bind group layout.
         let uniform_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             label: None,
-            bindings: &[BindGroupLayoutEntry {
+            entries: &[BindGroupLayoutEntry {
                 binding: 0,
                 visibility: wgpu::ShaderStage::VERTEX,
-                ty: BindingType::UniformBuffer { dynamic: false },
+                ty: BindingType::UniformBuffer {
+                    dynamic: false,
+                    min_binding_size: None,
+                },
+                count: None,
             }],
         });
 
         // Create the uniform matrix buffer bind group.
         let uniform_bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: None,
+            label: Some("imgui-wgpu bind group"),
             layout: &uniform_layout,
-            bindings: &[Binding {
+            entries: &[BindGroupEntry {
                 binding: 0,
-                resource: BindingResource::Buffer {
-                    buffer: &uniform_buffer,
-                    range: 0..size,
-                },
+                resource: BindingResource::Buffer(uniform_buffer.slice(..)),
             }],
         });
 
         // Create the texture layout for further usage.
         let texture_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: None,
-            bindings: &[
+            label: Some("imgui-wgpu bind group layout"),
+            entries: &[
                 BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStage::FRAGMENT,
@@ -214,23 +216,28 @@ impl Renderer {
                         component_type: TextureComponentType::Float,
                         dimension: TextureViewDimension::D2,
                     },
+                    count: None,
                 },
                 BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStage::FRAGMENT,
                     ty: BindingType::Sampler { comparison: false },
+                    count: None,
                 },
             ],
         });
 
         // Create the render pipeline layout.
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: Some("imgui-wgpu pipeline layout"),
             bind_group_layouts: &[&uniform_layout, &texture_layout],
+            push_constant_ranges: &[],
         });
 
         // Create the render pipeline.
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-            layout: &pipeline_layout,
+            label: Some("imgui-wgpu pipeline"),
+            layout: Some(&pipeline_layout),
             vertex_stage: ProgrammableStageDescriptor {
                 module: &vs_module,
                 entry_point: "main",
@@ -242,6 +249,7 @@ impl Renderer {
             rasterization_state: Some(RasterizationStateDescriptor {
                 front_face: FrontFace::Cw,
                 cull_mode: CullMode::None,
+                clamp_depth: false,
                 depth_bias: 0,
                 depth_bias_slope_scale: 0.0,
                 depth_bias_clamp: 0.0,
@@ -267,23 +275,7 @@ impl Renderer {
                 vertex_buffers: &[VertexBufferDescriptor {
                     stride: size_of::<DrawVert>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
-                    attributes: &[
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float2,
-                            shader_location: 0,
-                            offset: 0,
-                        },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Float2,
-                            shader_location: 1,
-                            offset: 8,
-                        },
-                        VertexAttributeDescriptor {
-                            format: VertexFormat::Uint,
-                            shader_location: 2,
-                            offset: 16,
-                        },
-                    ],
+                    attributes: &vertex_attr_array![0 => Float2, 1 => Float2, 2 => Uint],
                 }],
             },
             sample_count: 1,
@@ -297,9 +289,8 @@ impl Renderer {
             uniform_bind_group,
             textures: Textures::new(),
             texture_layout,
-            clear_color,
-            vertex_buffers: vec![],
-            index_buffers: vec![],
+            vertex_buffers: SmallVec::new(),
+            index_buffers: SmallVec::new(),
         };
 
         // Immediately load the fon texture to the GPU.
@@ -312,9 +303,9 @@ impl Renderer {
     pub fn render<'r>(
         &'r mut self,
         draw_data: &DrawData,
+        queue: &Queue,
         device: &Device,
-        encoder: &'r mut CommandEncoder,
-        view: &TextureView,
+        rpass: &mut RenderPass<'r>,
     ) -> RendererResult<()> {
         let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
         let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
@@ -341,27 +332,8 @@ impl Renderer {
             [0.0, 0.0, 1.0, 0.0],
             [-1.0, 1.0, 0.0, 1.0],
         ];
-        self.update_uniform_buffer(device, encoder, &matrix);
+        self.update_uniform_buffer(queue, &matrix);
 
-        // Start a new renderpass and prepare it properly.
-        let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
-            color_attachments: &[RenderPassColorAttachmentDescriptor {
-                attachment: &view,
-                resolve_target: None,
-                load_op: match self.clear_color {
-                    Some(_) => LoadOp::Clear,
-                    _ => LoadOp::Load,
-                },
-                store_op: StoreOp::Store,
-                clear_color: self.clear_color.unwrap_or(Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 1.0,
-                }),
-            }],
-            depth_stencil_attachment: None,
-        });
         rpass.set_pipeline(&self.pipeline);
         rpass.set_bind_group(0, &self.uniform_bind_group, &[]);
 
@@ -378,7 +350,7 @@ impl Renderer {
         // Execute all the imgui render work.
         for (draw_list_buffers_index, draw_list) in draw_data.draw_lists().enumerate() {
             self.render_draw_list(
-                &mut rpass,
+                rpass,
                 &draw_list,
                 draw_data.display_pos,
                 draw_data.framebuffer_scale,
@@ -404,8 +376,8 @@ impl Renderer {
         let vertex_buffer = &self.vertex_buffers[draw_list_buffers_index];
 
         // Make sure the current buffers are attached to the render pass.
-        rpass.set_index_buffer(&index_buffer, 0, WHOLE_BUFFER);
-        rpass.set_vertex_buffer(0, &vertex_buffer, 0, WHOLE_BUFFER);
+        rpass.set_index_buffer(index_buffer.slice(..));
+        rpass.set_vertex_buffer(0, vertex_buffer.slice(..));
 
         for cmd in draw_list.commands() {
             match cmd {
@@ -446,30 +418,35 @@ impl Renderer {
     }
 
     /// Updates the current uniform buffer containing the transform matrix.
-    fn update_uniform_buffer(
-        &mut self,
-        device: &Device,
-        encoder: &mut CommandEncoder,
-        matrix: &[[f32; 4]; 4],
-    ) {
-        let data = as_byte_slice(matrix);
-        // Create a new buffer.
-        let buffer = device.create_buffer_with_data(data, BufferUsage::COPY_SRC);
+    fn update_uniform_buffer(&mut self, queue: &Queue, matrix: &[[f32; 4]; 4]) {
+        let data = bytemuck::bytes_of(matrix);
 
-        // Copy the new buffer to the real buffer.
-        encoder.copy_buffer_to_buffer(&buffer, 0, &self.uniform_buffer, 0, 64);
+        queue.write_buffer(&self.uniform_buffer, 0, data);
     }
 
-    /// Upload the vertex buffer to the gPU.
+    /// Upload the vertex buffer to the GPU.
     fn upload_vertex_buffer(&self, device: &Device, vertices: &[DrawVert]) -> Buffer {
-        let data = as_byte_slice(&vertices);
-        device.create_buffer_with_data(data, BufferUsage::VERTEX)
+        // Safety: DrawVertPod is #[repr(transparent)] over DrawVert and DrawVert _should_ be Pod.
+        let vertices = unsafe {
+            std::slice::from_raw_parts(vertices.as_ptr() as *mut DrawVertPod, vertices.len())
+        };
+
+        let data = bytemuck::cast_slice(&vertices);
+        device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("imgui-wgpu vertex buffer"),
+            contents: data,
+            usage: BufferUsage::VERTEX,
+        })
     }
 
     /// Upload the index buffer to the GPU.
     fn upload_index_buffer(&self, device: &Device, indices: &[DrawIdx]) -> Buffer {
-        let data = as_byte_slice(&indices);
-        device.create_buffer_with_data(data, BufferUsage::INDEX)
+        let data = bytemuck::cast_slice(&indices);
+        device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("imgui-wgpu index buffer"),
+            contents: data,
+            usage: BufferUsage::INDEX,
+        })
     }
 
     /// Updates the texture on the GPU corresponding to the current imgui font atlas.
@@ -478,8 +455,14 @@ impl Renderer {
     pub fn reload_font_texture(&mut self, imgui: &mut Context, device: &Device, queue: &Queue) {
         let mut atlas = imgui.fonts();
         let handle = atlas.build_rgba32_texture();
-        let font_texture_id =
-            self.upload_texture(device, queue, &handle.data, handle.width, handle.height);
+        let font_texture_id = self.upload_texture(
+            device,
+            queue,
+            &handle.data,
+            handle.width,
+            handle.height,
+            Some("imgui-wgpu font atlas"),
+        );
 
         atlas.tex_id = font_texture_id;
     }
@@ -492,6 +475,7 @@ impl Renderer {
         data: &[u8],
         width: u32,
         height: u32,
+        label: Option<&str>,
     ) -> TextureId {
         // Create the wgpu texture.
         let texture = device.create_texture(&TextureDescriptor {
@@ -501,7 +485,6 @@ impl Renderer {
                 height,
                 depth: 1,
             },
-            array_layer_count: 1,
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
@@ -509,26 +492,18 @@ impl Renderer {
             usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
         });
 
-        // Upload the actual data to a wgpu buffer.
         let bytes = data.len();
-        let buffer = device.create_buffer_with_data(data, BufferUsage::COPY_SRC);
-
-        // Make sure we have an active encoder.
-        let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
-
-        // Schedule a copy from the buffer to the texture.
-        encoder.copy_buffer_to_texture(
-            BufferCopyView {
-                buffer: &buffer,
-                offset: 0,
-                bytes_per_row: bytes as u32 / height,
-                rows_per_image: height,
-            },
+        queue.write_texture(
             TextureCopyView {
                 texture: &texture,
                 mip_level: 0,
-                array_layer: 0,
                 origin: Origin3d { x: 0, y: 0, z: 0 },
+            },
+            data,
+            TextureDataLayout {
+                offset: 0,
+                bytes_per_row: bytes as u32 / height,
+                rows_per_image: height,
             },
             Extent3d {
                 width,
@@ -537,16 +512,7 @@ impl Renderer {
             },
         );
 
-        // Resolve the actual copy process.
-        queue.submit(&[encoder.finish()]);
-
-        let texture = Texture::new(texture, &self.texture_layout, device);
+        let texture = Texture::new(texture, &self.texture_layout, device, label);
         self.textures.insert(texture)
     }
-}
-
-fn as_byte_slice<T>(slice: &[T]) -> &[u8] {
-    let len = slice.len() * std::mem::size_of::<T>();
-    let ptr = slice.as_ptr() as *const u8;
-    unsafe { std::slice::from_raw_parts(ptr, len) }
 }
