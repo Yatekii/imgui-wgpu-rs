@@ -96,31 +96,51 @@ pub struct Renderer {
     clear_color: Option<Color>,
     index_buffers: Vec<Buffer>,
     vertex_buffers: Vec<Buffer>,
+    msaa_framebuffer: Option<(wgpu::TextureView, wgpu::Extent3d, u32)>,
 }
 
 impl Renderer {
     /// Create a new imgui wgpu renderer with newly compiled shaders.
+    ///
+    /// `msaa_samples` specifies the MSAA (multisample anti-aliasing) sample count. If
+    /// less or equal than `1` MSAA is disabled, otherwise creates the MSAA frambuffer
+    /// texture. You must recreate the renderer to modify MSAA.
     #[cfg(feature = "glsl-to-spirv")]
     pub fn new_glsl(
         imgui: &mut Context,
         device: &Device,
         queue: &Queue,
-        format: TextureFormat,
+        swap_chain_descriptor: &SwapChainDescriptor,
         clear_color: Option<Color>,
+        msaa_samples: u32,
     ) -> Renderer {
         let (vs_code, fs_code) = Shaders::get_program_code();
         let vs_raw = Shaders::compile_glsl(vs_code, ShaderStage::Vertex);
         let fs_raw = Shaders::compile_glsl(fs_code, ShaderStage::Fragment);
-        Self::new_impl(imgui, device, queue, format, clear_color, vs_raw, fs_raw)
+        Self::new_impl(
+            imgui,
+            device,
+            queue,
+            swap_chain_descriptor,
+            clear_color,
+            vs_raw,
+            fs_raw,
+            msaa_samples,
+        )
     }
 
     /// Create a new imgui wgpu renderer, using prebuilt spirv shaders.
+    ///
+    /// `msaa_samples` specifies the MSAA (multisample anti-aliasing) sample count. If
+    /// less or equal than `1` MSAA is disabled, otherwise creates the MSAA frambuffer
+    /// texture. You must recreate the renderer to modify MSAA.
     pub fn new(
         imgui: &mut Context,
         device: &Device,
         queue: &Queue,
-        format: TextureFormat,
+        swap_chain_descriptor: &SwapChainDescriptor,
         clear_color: Option<Color>,
+        msaa_samples: u32,
     ) -> Renderer {
         let vs_bytes = include_bytes!("imgui.vert.spv");
         let fs_bytes = include_bytes!("imgui.frag.spv");
@@ -139,10 +159,11 @@ impl Renderer {
             imgui,
             device,
             queue,
-            format,
+            swap_chain_descriptor,
             clear_color,
             compile(vs_bytes),
             compile(fs_bytes),
+            msaa_samples,
         )
     }
 
@@ -151,10 +172,10 @@ impl Renderer {
         imgui: &mut Context,
         device: &Device,
         queue: &Queue,
-        format: TextureFormat,
+        swap_chain_descriptor: &SwapChainDescriptor,
         clear_color: Option<Color>,
     ) -> Renderer {
-        Renderer::new(imgui, device, queue, format, clear_color)
+        Renderer::new(imgui, device, queue, swap_chain_descriptor, clear_color, 1)
     }
 
     /// Create an entirely new imgui wgpu renderer.
@@ -162,10 +183,11 @@ impl Renderer {
         imgui: &mut Context,
         device: &Device,
         queue: &Queue,
-        format: TextureFormat,
+        swap_chain_descriptor: &SwapChainDescriptor,
         clear_color: Option<Color>,
         vs_raw: Vec<u32>,
         fs_raw: Vec<u32>,
+        msaa_samples: u32,
     ) -> Renderer {
         // Load shaders.
         let vs_module = device.create_shader_module(&vs_raw);
@@ -248,7 +270,7 @@ impl Renderer {
             }),
             primitive_topology: PrimitiveTopology::TriangleList,
             color_states: &[ColorStateDescriptor {
-                format,
+                format: swap_chain_descriptor.format,
                 color_blend: BlendDescriptor {
                     src_factor: BlendFactor::SrcAlpha,
                     dst_factor: BlendFactor::OneMinusSrcAlpha,
@@ -286,10 +308,21 @@ impl Renderer {
                     ],
                 }],
             },
-            sample_count: 1,
+            sample_count: msaa_samples,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
         });
+
+        // Create multisampling anti-aliasing framebuffer if the sample count is greater than 1.
+        let msaa_framebuffer = if msaa_samples > 1 {
+            Some(create_msaa_framebuffer(
+                &device,
+                &swap_chain_descriptor,
+                msaa_samples,
+            ))
+        } else {
+            None
+        };
 
         let mut renderer = Renderer {
             pipeline,
@@ -300,6 +333,7 @@ impl Renderer {
             clear_color,
             vertex_buffers: vec![],
             index_buffers: vec![],
+            msaa_framebuffer,
         };
 
         // Immediately load the fon texture to the GPU.
@@ -315,6 +349,7 @@ impl Renderer {
         device: &Device,
         encoder: &'r mut CommandEncoder,
         view: &TextureView,
+        swap_desc: &SwapChainDescriptor,
     ) -> RendererResult<()> {
         let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
         let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
@@ -343,11 +378,25 @@ impl Renderer {
         ];
         self.update_uniform_buffer(device, encoder, &matrix);
 
+        // If we have a msaa framebuffer, use it.
+        let (attachment, resolve_target) =
+            if let Some((ref msaa_framebuffer, ref extent, sample_count)) = self.msaa_framebuffer {
+                if extent.width == swap_desc.width && extent.height == swap_desc.height {
+                    (msaa_framebuffer, Some(view))
+                } else {
+                    // Recreate the MSAA framebuffer if the frame size changed.
+                    self.msaa_framebuffer = Some(create_msaa_framebuffer(device, swap_desc, sample_count));
+                    (&self.msaa_framebuffer.as_ref().unwrap().0, Some(view))
+                }
+            } else {
+                (view, None)
+            };
+
         // Start a new renderpass and prepare it properly.
         let mut rpass = encoder.begin_render_pass(&RenderPassDescriptor {
             color_attachments: &[RenderPassColorAttachmentDescriptor {
-                attachment: &view,
-                resolve_target: None,
+                attachment,
+                resolve_target,
                 load_op: match self.clear_color {
                     Some(_) => LoadOp::Clear,
                     _ => LoadOp::Load,
@@ -476,6 +525,7 @@ impl Renderer {
     ///
     /// This has to be called after loading a font.
     pub fn reload_font_texture(&mut self, imgui: &mut Context, device: &Device, queue: &Queue) {
+        // TODO: handle shared font atlas?
         let mut atlas = imgui.fonts();
         let handle = atlas.build_rgba32_texture();
         let font_texture_id =
@@ -543,6 +593,39 @@ impl Renderer {
         let texture = Texture::new(texture, &self.texture_layout, device);
         self.textures.insert(texture)
     }
+}
+
+/// Creates new framebuffer for multisampling anti-aliasing with the specified
+/// `sample_count`.  
+/// Returnes a tuple with the `wgpu::TextureView`, the size of the texture
+/// (an `wgpu::Extent3d`) and the MSAA sample count used.
+fn create_msaa_framebuffer(
+    device: &wgpu::Device,
+    sc_desc: &wgpu::SwapChainDescriptor,
+    sample_count: u32,
+) -> (wgpu::TextureView, wgpu::Extent3d, u32) {
+    let multisampled_texture_extent = wgpu::Extent3d {
+        width: sc_desc.width,
+        height: sc_desc.height,
+        depth: 1,
+    };
+    let multisampled_frame_descriptor = &wgpu::TextureDescriptor {
+        label: Some("imgui_msaa_texture"),
+        size: multisampled_texture_extent,
+        array_layer_count: 1,
+        mip_level_count: 1,
+        sample_count: sample_count,
+        dimension: wgpu::TextureDimension::D2,
+        format: sc_desc.format,
+        usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
+    };
+    (
+        device
+            .create_texture(multisampled_frame_descriptor)
+            .create_default_view(),
+        multisampled_texture_extent,
+        sample_count,
+    )
 }
 
 fn as_byte_slice<T>(slice: &[T]) -> &[u8] {

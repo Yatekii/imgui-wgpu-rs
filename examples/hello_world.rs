@@ -96,8 +96,9 @@ fn main() {
         &mut imgui,
         &device,
         &mut queue,
-        sc_desc.format,
+        &sc_desc,
         Some(clear_color),
+        1
     );
 
     #[cfg(feature = "glsl-to-spirv")]
@@ -105,8 +106,9 @@ fn main() {
         &mut imgui,
         &device,
         &mut queue,
-        sc_desc.format,
+        &sc_desc,
         Some(clear_color),
+        1
     );
 
     let mut last_frame = Instant::now();
@@ -215,7 +217,7 @@ fn main() {
                     platform.prepare_render(&ui, &window);
                 }
                 renderer
-                    .render(ui.render(), &mut device, &mut encoder, &frame.view)
+                    .render(ui.render(), &mut device, &mut encoder, &frame.view, &sc_desc)
                     .expect("Rendering failed");
 
                 queue.submit(&[encoder.finish()]);
