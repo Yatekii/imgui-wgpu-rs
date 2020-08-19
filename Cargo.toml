@@ -16,20 +16,20 @@ license = "MIT OR Apache-2.0"
 default = []
 
 [dependencies]
-wgpu = "0.5"
-glsl-to-spirv = { version = "0.1", optional = true }
-log = "0.4"
-imgui = "0.4"
+wgpu = "~0.5.2"
+glsl-to-spirv = { version = "~0.1.7", optional = true }
+log = "~0.4.11"
+imgui = "~0.4.0"
 
 [dev-dependencies]
-winit = "0.22"
-raw-window-handle = "0.3"
-env_logger = "0.7"
-image = "0.23"
-futures = "0.3"
+winit = "0.22.2"
+raw-window-handle = "0.3.3"
+env_logger = "0.7.1"
+image = "0.23.8"
+futures = "0.3.5"
 
 [dev-dependencies.imgui-winit-support]
-version = "0.4"
+version = "0.4.0"
 default-features = false
 features = ["winit-22"]
 
