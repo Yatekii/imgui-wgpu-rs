@@ -59,8 +59,10 @@ impl Shaders {
     }
 }
 
-/// A container for a bindable texture to be used internally.
+/// A container for a bindable texture.
 pub struct Texture {
+    texture: wgpu::Texture,
+    size: Extent3d,
     bind_group: BindGroup,
     view: wgpu::TextureView,
 }
@@ -68,11 +70,28 @@ pub struct Texture {
 impl Texture {
     /// Creates a new imgui texture from a wgpu texture.
     pub fn new(
-        texture: wgpu::Texture,
-        layout: &BindGroupLayout,
+        width: u32,
+        height: u32,
         device: &Device,
+        renderer: &Renderer,
         label: Option<&str>,
     ) -> Self {
+        // Create the wgpu texture.
+        let size = Extent3d {
+            width,
+            height,
+            depth: 1,
+        };
+        let texture = device.create_texture(&TextureDescriptor {
+            label,
+            size: size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format: TextureFormat::Rgba8Unorm,
+            usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
+        });
+
         // Extract the texture view.
         let view = texture.create_view(&TextureViewDescriptor::default());
 
@@ -94,7 +113,7 @@ impl Texture {
         // Create the texture bind group from the layout.
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             label,
-            layout,
+            layout: &renderer.texture_layout,
             entries: &[
                 BindGroupEntry {
                     binding: 0,
@@ -107,7 +126,32 @@ impl Texture {
             ],
         });
 
-        Texture { bind_group, view }
+        Texture {
+            texture,
+            size,
+            bind_group,
+            view
+        }
+    }
+
+    /// Upload the texture `data` to the GPU.
+    /// 
+    /// `data` must be a 32-bit RGBA bitmap with the size as specified in `Texture::new()`.
+    pub fn upload(&self, queue: &Queue, data: &[u8]) {
+        queue.write_texture(
+            TextureCopyView {
+                texture: &self.texture,
+                mip_level: 0,
+                origin: Origin3d { x: 0, y: 0, z: 0 },
+            },
+            data,
+            TextureDataLayout {
+                offset: 0,
+                bytes_per_row: data.len() as u32 / self.size.height,
+                rows_per_image: self.size.height,
+            },
+            self.size,
+        );
     }
 }
 
@@ -115,7 +159,8 @@ pub struct Renderer {
     pipeline: RenderPipeline,
     uniform_buffer: Buffer,
     uniform_bind_group: BindGroup,
-    textures: Textures<Texture>,
+    /// Textures of the font atlas and all images.
+    pub textures: Textures<Texture>,
     texture_layout: BindGroupLayout,
     index_buffers: SmallVec<[Buffer; 4]>,
     vertex_buffers: SmallVec<[Buffer; 4]>,
@@ -325,7 +370,7 @@ impl Renderer {
             index_buffers: SmallVec::new(),
         };
 
-        // Immediately load the fon texture to the GPU.
+        // Immediately load the font texture to the GPU.
         renderer.reload_font_texture(imgui, device, queue);
 
         renderer
@@ -488,67 +533,23 @@ impl Renderer {
     ///
     /// This has to be called after loading a font.
     pub fn reload_font_texture(&mut self, imgui: &mut Context, device: &Device, queue: &Queue) {
-        let mut atlas = imgui.fonts();
-        let handle = atlas.build_rgba32_texture();
-        let font_texture_id = self.upload_texture(
-            device,
-            queue,
-            &handle.data,
+        let mut fonts = imgui.fonts();
+        // Remove possible font atlas texture.
+        self.textures.remove(fonts.tex_id);
+
+        // Create font texture and upload it.
+        let handle = fonts.build_rgba32_texture();
+        let font_texture = Texture::new(
             handle.width,
             handle.height,
+            device,
+            self,
             Some("imgui-wgpu font atlas"),
         );
-
-        atlas.tex_id = font_texture_id;
-    }
-
-    /// Creates and uploads a new wgpu texture made from the imgui font atlas.
-    pub fn upload_texture(
-        &mut self,
-        device: &Device,
-        queue: &Queue,
-        data: &[u8],
-        width: u32,
-        height: u32,
-        label: Option<&str>,
-    ) -> TextureId {
-        // Create the wgpu texture.
-        let texture = device.create_texture(&TextureDescriptor {
-            label: None,
-            size: Extent3d {
-                width,
-                height,
-                depth: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba8Unorm,
-            usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
-        });
-
-        let bytes = data.len();
-        queue.write_texture(
-            TextureCopyView {
-                texture: &texture,
-                mip_level: 0,
-                origin: Origin3d { x: 0, y: 0, z: 0 },
-            },
-            data,
-            TextureDataLayout {
-                offset: 0,
-                bytes_per_row: bytes as u32 / height,
-                rows_per_image: height,
-            },
-            Extent3d {
-                width,
-                height,
-                depth: 1,
-            },
-        );
-
-        let texture = Texture::new(texture, &self.texture_layout, device, label);
-        self.textures.insert(texture)
+        font_texture.upload(&queue, handle.data);
+        fonts.tex_id = self.textures.insert(font_texture);
+        // Clear imgui texture data to save memory.
+        fonts.clear_tex_data();
     }
 
     pub fn insert_texture(

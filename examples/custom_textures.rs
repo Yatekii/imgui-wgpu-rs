@@ -1,7 +1,7 @@
 use futures::executor::block_on;
 use image::ImageFormat;
 use imgui::*;
-use imgui_wgpu::Renderer;
+use imgui_wgpu::{Renderer, Texture};
 use imgui_winit_support;
 use std::time::Instant;
 use winit::{
@@ -106,14 +106,10 @@ fn main() {
     let image = image.to_rgba();
     let (width, height) = image.dimensions();
     let raw_data = image.into_raw();
-    let lenna_texture_id = renderer.upload_texture(
-        &device,
-        &mut queue,
-        &raw_data,
-        width,
-        height,
-        Some("lenna texture"),
-    );
+
+    let texture = Texture::new(width, height, &device, &renderer, Some("lenna texture"));
+    texture.upload(&queue, &raw_data);
+    let lenna_texture_id = renderer.textures.insert(texture);
 
     let mut last_cursor = None;
 
