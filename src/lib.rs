@@ -153,6 +153,16 @@ impl Texture {
             self.size,
         );
     }
+
+    /// The width of the texture.
+    pub fn width(&self) -> u32 {
+        self.size.width
+    }
+
+    /// The height of the texture.
+    pub fn height(&self) -> u32 {
+        self.size.height
+    }
 }
 
 pub struct Renderer {
