@@ -107,8 +107,8 @@ fn main() {
     let (width, height) = image.dimensions();
     let raw_data = image.into_raw();
 
-    let texture = Texture::new(width, height, &device, &renderer, Some("lenna texture"));
-    texture.upload(&queue, &raw_data);
+    let texture = Texture::new(&device, &renderer, width, height, Some("lenna texture"));
+    texture.write(&queue, &raw_data, width, height);
     let lenna_texture_id = renderer.textures.insert(texture);
 
     let mut last_cursor = None;

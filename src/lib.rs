@@ -62,18 +62,23 @@ impl Shaders {
 /// A container for a bindable texture.
 pub struct Texture {
     texture: wgpu::Texture,
-    size: Extent3d,
     bind_group: BindGroup,
     view: wgpu::TextureView,
+    width: u32,
+    height: u32
 }
 
 impl Texture {
-    /// Creates a new imgui texture from a wgpu texture.
+    /// Creates a new GPU texture width the specified `width` and `height`.
+    /// 
+    /// - `width`: The width of the new texture in pixels.  
+    /// - `height`: The height of the new texture in pixels.  
+    /// - `label`: Identifies the texture in a debugger.
     pub fn new(
-        width: u32,
-        height: u32,
         device: &Device,
         renderer: &Renderer,
+        width: u32,
+        height: u32,
         label: Option<&str>,
     ) -> Self {
         // Create the wgpu texture.
@@ -128,40 +133,51 @@ impl Texture {
 
         Texture {
             texture,
-            size,
             bind_group,
+            width: size.width,
+            height: size.height
             view
         }
     }
 
-    /// Upload the texture `data` to the GPU.
-    /// 
-    /// `data` must be a 32-bit RGBA bitmap with the size as specified in `Texture::new()`.
-    pub fn upload(&self, queue: &Queue, data: &[u8]) {
+    /// Write `data` to the texture.
+    ///
+    /// - `data`: 32-bit RGBA bitmap data.
+    /// - `width`: The width of the source bitmap (`data`) in pixels.
+    /// - `height`: The height of the source bitmap (`data`) in pixels.
+    pub fn write(&self, queue: &Queue, data: &[u8], width: u32, height: u32) {
         queue.write_texture(
+            // destination (sub)texture
             TextureCopyView {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: Origin3d { x: 0, y: 0, z: 0 },
             },
+            // source bitmap data
             data,
+            // layout of the source bitmap
             TextureDataLayout {
                 offset: 0,
-                bytes_per_row: data.len() as u32 / self.size.height,
-                rows_per_image: self.size.height,
+                bytes_per_row: width * 4,
+                rows_per_image: height,
             },
-            self.size,
+            // size of the source bitmap
+            Extent3d {
+                width,
+                height,
+                depth: 1,
+            },
         );
     }
 
-    /// The width of the texture.
+    /// The width of the texture in pixels.
     pub fn width(&self) -> u32 {
-        self.size.width
+        self.width
     }
 
-    /// The height of the texture.
+    /// The height of the texture in pixels.
     pub fn height(&self) -> u32 {
-        self.size.height
+        self.height
     }
 }
 
@@ -550,13 +566,13 @@ impl Renderer {
         // Create font texture and upload it.
         let handle = fonts.build_rgba32_texture();
         let font_texture = Texture::new(
-            handle.width,
-            handle.height,
             device,
             self,
+            handle.width,
+            handle.height,
             Some("imgui-wgpu font atlas"),
         );
-        font_texture.upload(&queue, handle.data);
+        font_texture.write(&queue, handle.data, handle.width, handle.height);
         fonts.tex_id = self.textures.insert(font_texture);
         // Clear imgui texture data to save memory.
         fonts.clear_tex_data();
