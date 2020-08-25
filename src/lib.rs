@@ -65,12 +65,12 @@ pub struct Texture {
     bind_group: BindGroup,
     view: wgpu::TextureView,
     width: u32,
-    height: u32
+    height: u32,
 }
 
 impl Texture {
     /// Creates a new GPU texture width the specified `width` and `height`.
-    /// 
+    ///
     /// - `width`: The width of the new texture in pixels.  
     /// - `height`: The height of the new texture in pixels.  
     /// - `label`: Identifies the texture in a debugger.
@@ -135,7 +135,7 @@ impl Texture {
             texture,
             bind_group,
             width: size.width,
-            height: size.height
+            height: size.height,
             view
         }
     }
