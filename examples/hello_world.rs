@@ -99,7 +99,7 @@ fn main() {
     let mut renderer = Renderer::new(&mut imgui, &device, &mut queue, sc_desc.format, None, 1);
 
     #[cfg(feature = "glsl-to-spirv")]
-    let mut renderer = Renderer::new_glsl(&mut imgui, &device, &mut queue, sc_desc.format);
+    let mut renderer = Renderer::new_glsl(&mut imgui, &device, &mut queue, sc_desc.format, None, 1);
 
     let mut last_frame = Instant::now();
     let mut demo_open = true;

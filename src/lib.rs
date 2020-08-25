@@ -129,8 +129,8 @@ impl Renderer {
         device: &Device,
         queue: &Queue,
         format: TextureFormat,
-        sample_count: u32,
         depth_format: Option<TextureFormat>,
+        sample_count: u32,
     ) -> Renderer {
         let (vs_code, fs_code) = Shaders::get_program_code();
         let vs_raw = Shaders::compile_glsl(vs_code, ShaderStage::Vertex);
