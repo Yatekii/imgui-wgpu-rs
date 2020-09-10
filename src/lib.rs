@@ -62,6 +62,7 @@ impl Shaders {
 /// A container for a bindable texture to be used internally.
 pub struct Texture {
     bind_group: BindGroup,
+    view: wgpu::TextureView,
 }
 
 impl Texture {
@@ -106,7 +107,7 @@ impl Texture {
             ],
         });
 
-        Texture { bind_group }
+        Texture { bind_group, view }
     }
 }
 
@@ -514,5 +515,35 @@ impl Renderer {
 
         let texture = Texture::new(texture, &self.texture_layout, device, label);
         self.textures.insert(texture)
+    }
+
+    pub fn insert_texture(
+        &mut self,
+        device: &Device,
+        texture: wgpu::Texture,
+        label: Option<&str>,
+    ) -> TextureId {
+        self.textures
+            .insert(Texture::new(texture, &self.texture_layout, device, label))
+    }
+
+    pub fn replace_texture(
+        &mut self,
+        texture_id: TextureId,
+        device: &Device,
+        texture: wgpu::Texture,
+        label: Option<&str>,
+    ) {
+        self.textures.replace(
+            texture_id,
+            Texture::new(texture, &self.texture_layout, device, label),
+        );
+    }
+
+    pub fn texture_view(&self, texture_id: TextureId) -> Option<&wgpu::TextureView> {
+        match self.textures.get(texture_id) {
+            Some(t) => Some(&t.view),
+            None => None,
+        }
     }
 }
