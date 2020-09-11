@@ -372,7 +372,6 @@ fn main() {
 
     // Set up window and GPU
     let event_loop = EventLoop::new();
-    let mut hidpi_factor = 1.0;
 
     let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
 
@@ -391,6 +390,8 @@ fn main() {
 
         (window, size, surface)
     };
+
+    let mut hidpi_factor = window.scale_factor();
 
     let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::HighPerformance,
