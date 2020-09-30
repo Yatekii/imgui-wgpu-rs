@@ -19,7 +19,7 @@ default = []
 wgpu = "0.6"
 glsl-to-spirv = { version = "0.1", optional = true }
 log = "0.4"
-imgui = "0.4"
+imgui = "0.5"
 bytemuck = "1"
 smallvec = "1"
 
@@ -33,7 +33,7 @@ cgmath = "0.17"
 bytemuck = { version = "1.4", features = ["derive"] }
 
 [dev-dependencies.imgui-winit-support]
-version = "0.4"
+version = "0.5"
 default-features = false
 features = ["winit-22"]
 

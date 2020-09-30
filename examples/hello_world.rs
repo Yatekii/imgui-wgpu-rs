@@ -158,7 +158,9 @@ fn main() {
             Event::MainEventsCleared => window.request_redraw(),
             Event::RedrawEventsCleared => {
                 let delta_s = last_frame.elapsed();
-                last_frame = imgui.io_mut().update_delta_time(last_frame);
+                let now = Instant::now();
+                imgui.io_mut().update_delta_time(now - last_frame);
+                last_frame = now;
 
                 let frame = match swap_chain.get_current_frame() {
                     Ok(frame) => frame,
