@@ -319,6 +319,9 @@ impl Renderer {
         let width = draw_data.display_size[0];
         let height = draw_data.display_size[1];
 
+        let offset_x = draw_data.display_pos[0] / width;
+        let offset_y = draw_data.display_pos[1] / height;
+
         // Create and update the transform matrix for the current frame.
         // This is required to adapt to vulkan coordinates.
         // let matrix = [
@@ -331,7 +334,7 @@ impl Renderer {
             [2.0 / width, 0.0, 0.0, 0.0],
             [0.0, 2.0 / -height as f32, 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
-            [-1.0, 1.0, 0.0, 1.0],
+            [-1.0 - offset_x * 2.0, 1.0 + offset_y * 2.0, 0.0, 1.0],
         ];
         self.update_uniform_buffer(queue, &matrix);
 
