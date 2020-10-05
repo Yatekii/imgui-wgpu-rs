@@ -62,32 +62,26 @@ impl Shaders {
 /// Config for creating a texture.
 ///
 /// Uses the builder pattern.
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct TextureConfig<'a> {
     /// The size of the texture.
     pub size: Extent3d,
     /// An optional label for the texture used for debugging.
     pub label: Option<&'a str>,
+    /// The format of the texture, if not set uses the format from the renderer.
+    pub format: Option<TextureFormat>,
+    /// The usage of the texture.
+    pub usage: TextureUsage,
+    /// The mip level of the texture.
+    pub mip_level_count: u32,
+    /// The sample count of the texture.
+    pub sample_count: u32,
+    /// The dimension of the texture.
+    pub dimension: TextureDimension,
 }
 
-impl TextureConfig<'_> {
-    /// Sets the size of the texture.
-    pub fn set_extent(mut self, size: Extent3d) -> Self {
-        self.size = size;
-        self
-    }
-
-    /// Sets the debug label of the texture.
-    pub fn set_label<'a>(self, label: &'a str) -> TextureConfig<'a> {
-        let TextureConfig { size, .. } = self;
-
-        TextureConfig {
-            size,
-            label: Some(label),
-        }
-    }
-
-    /// Creates a new texture config with the specified `width` and `height`.
+impl<'a> TextureConfig<'a> {
+    /// Create a new texture config with the specified `width` and `height`.
     pub fn new(width: u32, height: u32) -> TextureConfig<'static> {
         TextureConfig {
             size: Extent3d {
@@ -96,10 +90,63 @@ impl TextureConfig<'_> {
                 depth: 1,
             },
             label: None,
+            format: None,
+            usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
         }
     }
 
-    /// Builds a new `Texture` consuming this config.
+    /// Set the depth of the texture.
+    pub fn set_depth(mut self, depth: u32) -> Self {
+        self.size.depth = depth;
+        self
+    }
+
+    /// Set the debug label of the texture.
+    pub fn set_label<'b>(mut self, label: &'b str) -> TextureConfig<'b> {
+        self.label = None;
+
+        // Change the lifetime from 'a to 'b.
+        // Safe because there is guaranteed to be no reference in `label`.
+        let mut result: TextureConfig<'b> = unsafe { std::mem::transmute(self) };
+
+        result.label = Some(label);
+        result
+    }
+
+    /// Set the texture format.
+    pub fn set_format(mut self, format: TextureFormat) -> Self {
+        self.format = Some(format);
+        self
+    }
+
+    /// Set the texture usage.
+    pub fn set_usage(mut self, usage: TextureUsage) -> Self {
+        self.usage = usage;
+        self
+    }
+
+    /// Set the texture mip level.
+    pub fn set_mip_level_count(mut self, mip_level_count: u32) -> Self {
+        self.mip_level_count = mip_level_count;
+        self
+    }
+
+    /// Set the texture sample count.
+    pub fn set_sample_count(mut self, sample_count: u32) -> Self {
+        self.sample_count = sample_count;
+        self
+    }
+
+    /// Set the texture dimension.
+    pub fn set_dimension(mut self, dimension: TextureDimension) -> Self {
+        self.dimension = dimension;
+        self
+    }
+
+    /// Build a new `Texture` consuming this config.
     pub fn build(self, device: &Device, renderer: &Renderer) -> Texture {
         Texture::new(device, renderer, self)
     }
@@ -108,32 +155,38 @@ impl TextureConfig<'_> {
 /// A container for a bindable texture.
 pub struct Texture {
     texture: wgpu::Texture,
+    view: wgpu::TextureView,
     bind_group: BindGroup,
     size: Extent3d,
-    view: wgpu::TextureView,
 }
 
 impl Texture {
-    /// Creates a `Texture` from its raw parts.
-    pub fn from_raw_parts(texture: wgpu::Texture, bind_group: BindGroup, size: Extent3d) -> Self {
+    /// Create a `Texture` from its raw parts.
+    pub fn from_raw_parts(
+        texture: wgpu::Texture,
+        view: wgpu::TextureView,
+        bind_group: BindGroup,
+        size: Extent3d,
+    ) -> Self {
         Texture {
             texture,
+            view,
             bind_group,
             size,
         }
     }
 
-    /// Creates a new GPU texture width the specified `config`.
+    /// Create a new GPU texture width the specified `config`.
     pub fn new(device: &Device, renderer: &Renderer, config: TextureConfig) -> Self {
         // Create the wgpu texture.
         let texture = device.create_texture(&TextureDescriptor {
             label: config.label,
             size: config.size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba8Unorm,
-            usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
+            mip_level_count: config.mip_level_count,
+            sample_count: config.sample_count,
+            dimension: config.dimension,
+            format: config.format.unwrap_or(renderer.config.texture_format),
+            usage: config.usage,
         });
 
         // Extract the texture view.
@@ -172,9 +225,9 @@ impl Texture {
 
         Texture {
             texture,
+            view,
             bind_group,
             size: config.size,
-            view
         }
     }
 
@@ -227,6 +280,82 @@ impl Texture {
     pub fn size(&self) -> Extent3d {
         self.size
     }
+
+    /// The underlying `wgpu::Texture`.
+    pub fn texture(&self) -> &wgpu::Texture {
+        &self.texture
+    }
+
+    /// The `wgpu::TextureView` of the underlying texture.
+    pub fn view(&self) -> &wgpu::TextureView {
+        &self.view
+    }
+}
+
+/// Congiguration for the renderer.
+pub struct RendererConfig<'vs, 'fs> {
+    texture_format: TextureFormat,
+    depth_format: Option<TextureFormat>,
+    sample_count: u32,
+    vertex_shader: Option<ShaderModuleSource<'vs>>,
+    fragment_shader: Option<ShaderModuleSource<'fs>>,
+}
+
+impl RendererConfig<'_, '_> {
+    /// Create a new renderer config with custom shaders.
+    pub fn with_shaders<'vs, 'fs>(
+        vertex_shader: ShaderModuleSource<'vs>,
+        fragment_shader: ShaderModuleSource<'fs>,
+    ) -> RendererConfig<'vs, 'fs> {
+        RendererConfig {
+            texture_format: TextureFormat::Rgba8Unorm,
+            depth_format: None,
+            sample_count: 1,
+            vertex_shader: Some(vertex_shader),
+            fragment_shader: Some(fragment_shader),
+        }
+    }
+
+    /// Create a new renderer config with precompiled default shaders.
+    pub fn new() -> RendererConfig<'static, 'static> {
+        Self::with_shaders(
+            include_spirv!("imgui.vert.spv"),
+            include_spirv!("imgui.frag.spv"),
+        )
+    }
+
+    /// Create a new renderer config with newly compiled shaders.
+    #[cfg(feature = "glsl-to-spirv")]
+    pub fn new_glsl() -> RendererConfig<'static, 'static> {
+        let (vs_code, fs_code) = Shaders::get_program_code();
+        let vs_raw = Shaders::compile_glsl(vs_code, ShaderStage::Vertex);
+        let fs_raw = Shaders::compile_glsl(fs_code, ShaderStage::Fragment);
+
+        Self::with_shaders(vs_raw, fs_raw)
+    }
+
+    /// Set the texture format used by the renderer.
+    pub fn set_texture_format(mut self, texture_format: TextureFormat) -> Self {
+        self.texture_format = texture_format;
+        self
+    }
+
+    /// Set the depth format used by the renderer.
+    pub fn set_depth_format(mut self, depth_format: TextureFormat) -> Self {
+        self.depth_format = Some(depth_format);
+        self
+    }
+
+    /// Set the sample count used by the renderer.
+    pub fn set_sample_count(mut self, sample_count: u32) -> Self {
+        self.sample_count = sample_count;
+        self
+    }
+
+    /// Build a new `Renderer` consuming this config.
+    pub fn build(self, imgui: &mut Context, device: &Device, queue: &Queue) -> Renderer {
+        Renderer::new(imgui, device, queue, self)
+    }
 }
 
 pub struct Renderer {
@@ -238,84 +367,28 @@ pub struct Renderer {
     texture_layout: BindGroupLayout,
     index_buffers: SmallVec<[Buffer; 4]>,
     vertex_buffers: SmallVec<[Buffer; 4]>,
+    config: RendererConfig<'static, 'static>,
 }
 
 impl Renderer {
-    /// Create a new imgui wgpu renderer with newly compiled shaders.
-    #[cfg(feature = "glsl-to-spirv")]
-    pub fn new_glsl(
-        imgui: &mut Context,
-        device: &Device,
-        queue: &Queue,
-        format: TextureFormat,
-        depth_format: Option<TextureFormat>,
-        sample_count: u32,
-    ) -> Renderer {
-        let (vs_code, fs_code) = Shaders::get_program_code();
-        let vs_raw = Shaders::compile_glsl(vs_code, ShaderStage::Vertex);
-        let fs_raw = Shaders::compile_glsl(fs_code, ShaderStage::Fragment);
-        Self::new_impl(
-            imgui,
-            device,
-            queue,
-            format,
-            vs_raw,
-            fs_raw,
-            depth_format,
-            sample_count,
-        )
-    }
-
-    /// Create a new imgui wgpu renderer, using prebuilt spirv shaders.
+    /// Create an entirely new imgui wgpu renderer.
     pub fn new(
         imgui: &mut Context,
         device: &Device,
         queue: &Queue,
-        format: TextureFormat,
-        depth_format: Option<TextureFormat>,
-        sample_count: u32,
+        config: RendererConfig,
     ) -> Renderer {
-        let vs_bytes = include_spirv!("imgui.vert.spv");
-        let fs_bytes = include_spirv!("imgui.frag.spv");
-
-        Self::new_impl(
-            imgui,
-            device,
-            queue,
-            format,
-            vs_bytes,
-            fs_bytes,
+        let RendererConfig {
+            texture_format,
             depth_format,
             sample_count,
-        )
-    }
+            vertex_shader,
+            fragment_shader,
+        } = config;
 
-    #[deprecated(note = "Renderer::new now uses static shaders by default")]
-    pub fn new_static(
-        imgui: &mut Context,
-        device: &Device,
-        queue: &Queue,
-        format: TextureFormat,
-        depth_format: Option<TextureFormat>,
-        sample_count: u32,
-    ) -> Renderer {
-        Renderer::new(imgui, device, queue, format, depth_format, sample_count)
-    }
-
-    /// Create an entirely new imgui wgpu renderer.
-    fn new_impl(
-        imgui: &mut Context,
-        device: &Device,
-        queue: &Queue,
-        format: TextureFormat,
-        vs_raw: ShaderModuleSource<'_>,
-        fs_raw: ShaderModuleSource<'_>,
-        depth_format: Option<TextureFormat>,
-        sample_count: u32,
-    ) -> Renderer {
         // Load shaders.
-        let vs_module = device.create_shader_module(vs_raw);
-        let fs_module = device.create_shader_module(fs_raw);
+        let vs_module = device.create_shader_module(vertex_shader.unwrap());
+        let fs_module = device.create_shader_module(fragment_shader.unwrap());
 
         // Create the uniform matrix buffer.
         let size = 64;
@@ -402,7 +475,7 @@ impl Renderer {
             }),
             primitive_topology: PrimitiveTopology::TriangleList,
             color_states: &[ColorStateDescriptor {
-                format,
+                format: texture_format,
                 color_blend: BlendDescriptor {
                     src_factor: BlendFactor::SrcAlpha,
                     dst_factor: BlendFactor::OneMinusSrcAlpha,
@@ -442,6 +515,13 @@ impl Renderer {
             texture_layout,
             vertex_buffers: SmallVec::new(),
             index_buffers: SmallVec::new(),
+            config: RendererConfig {
+                texture_format,
+                depth_format,
+                sample_count,
+                vertex_shader: None,
+                fragment_shader: None,
+            },
         };
 
         // Immediately load the font texture to the GPU.
@@ -613,44 +693,12 @@ impl Renderer {
 
         // Create font texture and upload it.
         let handle = fonts.build_rgba32_texture();
-        let font_texture = Texture::new(
-            device,
-            self,
-            TextureConfig::new(handle.width, handle.height).set_label("imgui-wgpu font atlas"),
-        );
+        let font_texture = TextureConfig::new(handle.width, handle.height)
+            .set_label("imgui-wgpu font atlas")
+            .build(&device, self);
         font_texture.write(&queue, handle.data, handle.width, handle.height);
         fonts.tex_id = self.textures.insert(font_texture);
         // Clear imgui texture data to save memory.
         fonts.clear_tex_data();
-    }
-
-    pub fn insert_texture(
-        &mut self,
-        device: &Device,
-        texture: wgpu::Texture,
-        label: Option<&str>,
-    ) -> TextureId {
-        self.textures
-            .insert(Texture::new(texture, &self.texture_layout, device, label))
-    }
-
-    pub fn replace_texture(
-        &mut self,
-        texture_id: TextureId,
-        device: &Device,
-        texture: wgpu::Texture,
-        label: Option<&str>,
-    ) {
-        self.textures.replace(
-            texture_id,
-            Texture::new(texture, &self.texture_layout, device, label),
-        );
-    }
-
-    pub fn texture_view(&self, texture_id: TextureId) -> Option<&wgpu::TextureView> {
-        match self.textures.get(texture_id) {
-            Some(t) => Some(&t.view),
-            None => None,
-        }
     }
 }

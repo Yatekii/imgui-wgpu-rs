@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use futures::executor::block_on;
 use imgui::*;
-use imgui_wgpu::Renderer;
+use imgui_wgpu::{RendererConfig, TextureConfig};
 use imgui_winit_support;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
@@ -399,7 +399,7 @@ fn main() {
     }))
     .unwrap();
 
-    let (device, mut queue) = block_on(adapter.request_device(
+    let (device, queue) = block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
             features: wgpu::Features::empty(),
             limits: wgpu::Limits::default(),
@@ -453,10 +453,14 @@ fn main() {
     // };
 
     #[cfg(not(feature = "glsl-to-spirv"))]
-    let mut renderer = Renderer::new(&mut imgui, &device, &mut queue, sc_desc.format);
+    let mut renderer = RendererConfig::new()
+        .set_texture_format(sc_desc.format)
+        .build(&mut imgui, &device, &queue);
 
     #[cfg(feature = "glsl-to-spirv")]
-    let mut renderer = Renderer::new_glsl(&mut imgui, &device, &mut queue, sc_desc.format);
+    let mut renderer = RendererConfig::new_glsl()
+        .set_texture_format(sc_desc.format)
+        .build(&mut imgui, &device, &queue);
 
     let mut last_frame = Instant::now();
 
@@ -467,22 +471,10 @@ fn main() {
 
     // Stores a texture for displaying with imgui::Image(),
     // also as a texture view for rendering into it
-    let example_texture_id = renderer.insert_texture(
-        &device,
-        device.create_texture(&wgpu::TextureDescriptor {
-            size: wgpu::Extent3d {
-                width: example_size[0] as u32,
-                height: example_size[1] as u32,
-                depth: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: sc_desc.format,
-            usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT | wgpu::TextureUsage::SAMPLED,
-            label: None,
-        }),
-        None,
+    let example_texture_id = renderer.textures.insert(
+        TextureConfig::new(example_size[0] as u32, example_size[1] as u32)
+            .set_usage(wgpu::TextureUsage::OUTPUT_ATTACHMENT | wgpu::TextureUsage::SAMPLED)
+            .build(&device, &renderer),
     );
 
     // Event loop
@@ -573,31 +565,24 @@ fn main() {
                         if size != example_size && size[0] >= 1.0 && size[1] >= 1.0 {
                             example_size = size;
                             let scale = &ui.io().display_framebuffer_scale;
-                            renderer.replace_texture(
+                            renderer.textures.replace(
                                 example_texture_id,
-                                &device,
-                                device.create_texture(&wgpu::TextureDescriptor {
-                                    size: wgpu::Extent3d {
-                                        width: (example_size[0] * scale[0]) as u32,
-                                        height: (example_size[1] * scale[1]) as u32,
-                                        depth: 1,
-                                    },
-                                    mip_level_count: 1,
-                                    sample_count: 1,
-                                    dimension: wgpu::TextureDimension::D2,
-                                    format: sc_desc.format,
-                                    usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT
+                                TextureConfig::new(
+                                    (example_size[0] * scale[0]) as u32,
+                                    (example_size[1] * scale[1]) as u32,
+                                )
+                                .set_usage(
+                                    wgpu::TextureUsage::OUTPUT_ATTACHMENT
                                         | wgpu::TextureUsage::SAMPLED,
-                                    label: None,
-                                }),
-                                None,
+                                )
+                                .build(&device, &renderer),
                             );
                         }
 
                         // Only render example to example_texture if thw window is not collapsed
                         example.setup_camera(&queue, size);
                         example.render(
-                            &renderer.texture_view(example_texture_id).unwrap(),
+                            &renderer.textures.get(example_texture_id).unwrap().view(),
                             &device,
                             &queue,
                         );
