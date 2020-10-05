@@ -59,37 +59,76 @@ impl Shaders {
     }
 }
 
+/// Config for creating a texture.
+///
+/// Uses the builder pattern.
+#[derive(Default, Clone)]
+pub struct TextureConfig<'a> {
+    /// The size of the texture.
+    pub size: Extent3d,
+    /// An optional label for the texture used for debugging.
+    pub label: Option<&'a str>,
+}
+
+impl TextureConfig<'_> {
+    /// Sets the size of the texture.
+    pub fn set_extent(mut self, size: Extent3d) -> Self {
+        self.size = size;
+        self
+    }
+
+    /// Sets the debug label of the texture.
+    pub fn set_label<'a>(self, label: &'a str) -> TextureConfig<'a> {
+        let TextureConfig { size, .. } = self;
+
+        TextureConfig {
+            size,
+            label: Some(label),
+        }
+    }
+
+    /// Creates a new texture config with the specified `width` and `height`.
+    pub fn new(width: u32, height: u32) -> TextureConfig<'static> {
+        TextureConfig {
+            size: Extent3d {
+                width,
+                height,
+                depth: 1,
+            },
+            label: None,
+        }
+    }
+
+    /// Builds a new `Texture` consuming this config.
+    pub fn build(self, device: &Device, renderer: &Renderer) -> Texture {
+        Texture::new(device, renderer, self)
+    }
+}
+
 /// A container for a bindable texture.
 pub struct Texture {
     texture: wgpu::Texture,
     bind_group: BindGroup,
+    size: Extent3d,
     view: wgpu::TextureView,
-    width: u32,
-    height: u32,
 }
 
 impl Texture {
-    /// Creates a new GPU texture width the specified `width` and `height`.
-    ///
-    /// - `width`: The width of the new texture in pixels.  
-    /// - `height`: The height of the new texture in pixels.  
-    /// - `label`: Identifies the texture in a debugger.
-    pub fn new(
-        device: &Device,
-        renderer: &Renderer,
-        width: u32,
-        height: u32,
-        label: Option<&str>,
-    ) -> Self {
+    /// Creates a `Texture` from its raw parts.
+    pub fn from_raw_parts(texture: wgpu::Texture, bind_group: BindGroup, size: Extent3d) -> Self {
+        Texture {
+            texture,
+            bind_group,
+            size,
+        }
+    }
+
+    /// Creates a new GPU texture width the specified `config`.
+    pub fn new(device: &Device, renderer: &Renderer, config: TextureConfig) -> Self {
         // Create the wgpu texture.
-        let size = Extent3d {
-            width,
-            height,
-            depth: 1,
-        };
         let texture = device.create_texture(&TextureDescriptor {
-            label,
-            size: size,
+            label: config.label,
+            size: config.size,
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
@@ -117,7 +156,7 @@ impl Texture {
 
         // Create the texture bind group from the layout.
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label,
+            label: config.label,
             layout: &renderer.texture_layout,
             entries: &[
                 BindGroupEntry {
@@ -134,8 +173,7 @@ impl Texture {
         Texture {
             texture,
             bind_group,
-            width: size.width,
-            height: size.height,
+            size: config.size,
             view
         }
     }
@@ -172,12 +210,22 @@ impl Texture {
 
     /// The width of the texture in pixels.
     pub fn width(&self) -> u32 {
-        self.width
+        self.size.width
     }
 
     /// The height of the texture in pixels.
     pub fn height(&self) -> u32 {
-        self.height
+        self.size.height
+    }
+
+    /// The depth of the texture.
+    pub fn depth(&self) -> u32 {
+        self.size.depth
+    }
+
+    /// The size of the texture in pixels.
+    pub fn size(&self) -> Extent3d {
+        self.size
     }
 }
 
@@ -568,9 +616,7 @@ impl Renderer {
         let font_texture = Texture::new(
             device,
             self,
-            handle.width,
-            handle.height,
-            Some("imgui-wgpu font atlas"),
+            TextureConfig::new(handle.width, handle.height).set_label("imgui-wgpu font atlas"),
         );
         font_texture.write(&queue, handle.data, handle.width, handle.height);
         fonts.tex_id = self.textures.insert(font_texture);
