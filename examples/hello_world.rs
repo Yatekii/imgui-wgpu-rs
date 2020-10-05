@@ -1,6 +1,6 @@
 use futures::executor::block_on;
 use imgui::*;
-use imgui_wgpu::Renderer;
+use imgui_wgpu::RendererConfig;
 use imgui_winit_support;
 use std::time::Instant;
 use winit::{
@@ -42,7 +42,7 @@ fn main() {
     }))
     .unwrap();
 
-    let (device, mut queue) = block_on(adapter.request_device(
+    let (device, queue) = block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
             features: wgpu::Features::empty(),
             limits: wgpu::Limits::default(),
@@ -96,10 +96,14 @@ fn main() {
     };
 
     #[cfg(not(feature = "glsl-to-spirv"))]
-    let mut renderer = Renderer::new(&mut imgui, &device, &mut queue, sc_desc.format, None, 1);
+    let mut renderer = RendererConfig::new()
+        .set_texture_format(sc_desc.format)
+        .build(&mut imgui, &device, &queue);
 
     #[cfg(feature = "glsl-to-spirv")]
-    let mut renderer = Renderer::new_glsl(&mut imgui, &device, &mut queue, sc_desc.format, None, 1);
+    let mut renderer = RendererConfig::new_glsl()
+        .set_texture_format(sc_desc.format)
+        .build(&mut imgui, &device, &queue);
 
     let mut last_frame = Instant::now();
     let mut demo_open = true;

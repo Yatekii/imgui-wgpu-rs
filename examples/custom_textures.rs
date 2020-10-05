@@ -1,7 +1,7 @@
 use futures::executor::block_on;
 use image::ImageFormat;
 use imgui::*;
-use imgui_wgpu::{Renderer, Texture, TextureConfig};
+use imgui_wgpu::{RendererConfig, TextureConfig};
 use imgui_winit_support;
 use std::time::Instant;
 use winit::{
@@ -43,7 +43,7 @@ fn main() {
     }))
     .unwrap();
 
-    let (device, mut queue) = block_on(adapter.request_device(
+    let (device, queue) = block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
             features: wgpu::Features::empty(),
             limits: wgpu::Limits::default(),
@@ -95,7 +95,9 @@ fn main() {
         b: 0.3,
         a: 1.0,
     };
-    let mut renderer = Renderer::new(&mut imgui, &device, &mut queue, sc_desc.format, None, 1);
+    let mut renderer = RendererConfig::new()
+        .set_texture_format(sc_desc.format)
+        .build(&mut imgui, &device, &queue);
 
     let mut last_frame = Instant::now();
 
@@ -103,7 +105,7 @@ fn main() {
     let lenna_bytes = include_bytes!("../resources/Lenna.jpg");
     let image =
         image::load_from_memory_with_format(lenna_bytes, ImageFormat::Jpeg).expect("invalid image");
-    let image = image.to_rgba();
+    let image = image.to_bgra();
     let (width, height) = image.dimensions();
     let raw_data = image.into_raw();
 
