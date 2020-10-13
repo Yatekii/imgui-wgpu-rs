@@ -451,13 +451,7 @@ fn main() {
     //     a: 1.0,
     // };
 
-    #[cfg(not(feature = "shaderc"))]
     let mut renderer = RendererConfig::new()
-        .set_texture_format(sc_desc.format)
-        .build(&mut imgui, &device, &queue);
-
-    #[cfg(feature = "shaderc")]
-    let mut renderer = RendererConfig::new_glsl()
         .set_texture_format(sc_desc.format)
         .build(&mut imgui, &device, &queue);
 
