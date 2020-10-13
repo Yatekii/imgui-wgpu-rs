@@ -27,38 +27,6 @@ enum ShaderStage {
     Compute,
 }
 
-#[cfg(feature = "glsl-to-spirv")]
-struct Shaders;
-
-#[cfg(feature = "glsl-to-spirv")]
-impl Shaders {
-    fn compile_glsl(code: &str, stage: ShaderStage) -> ShaderModuleSource<'static> {
-        use std::io::Read as _;
-
-        let ty = match stage {
-            ShaderStage::Vertex => glsl_to_spirv::ShaderType::Vertex,
-            ShaderStage::Fragment => glsl_to_spirv::ShaderType::Fragment,
-            ShaderStage::Compute => glsl_to_spirv::ShaderType::Compute,
-        };
-
-        let mut data = Vec::new();
-        glsl_to_spirv::compile(&code, ty)
-            .unwrap()
-            .read_to_end(&mut data)
-            .unwrap();
-        let source = util::make_spirv(&data);
-        if let ShaderModuleSource::SpirV(cow) = source {
-            ShaderModuleSource::SpirV(std::borrow::Cow::Owned(cow.into()))
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn get_program_code() -> (&'static str, &'static str) {
-        (include_str!("imgui.vert"), include_str!("imgui.frag"))
-    }
-}
-
 /// Config for creating a texture.
 ///
 /// Uses the builder pattern.
@@ -322,16 +290,6 @@ impl RendererConfig<'_, '_> {
             include_spirv!("imgui.vert.spv"),
             include_spirv!("imgui.frag.spv"),
         )
-    }
-
-    /// Create a new renderer config with newly compiled shaders.
-    #[cfg(feature = "glsl-to-spirv")]
-    pub fn new_glsl() -> RendererConfig<'static, 'static> {
-        let (vs_code, fs_code) = Shaders::get_program_code();
-        let vs_raw = Shaders::compile_glsl(vs_code, ShaderStage::Vertex);
-        let fs_raw = Shaders::compile_glsl(fs_code, ShaderStage::Fragment);
-
-        Self::with_shaders(vs_raw, fs_raw)
     }
 
     /// Set the texture format used by the renderer.
@@ -624,11 +582,11 @@ impl Renderer {
                     ];
 
                     // Set the current texture bind group on the renderpass.
-                    let texture_id = cmd_params.texture_id.into();
+                    let texture_id = cmd_params.texture_id;
                     let tex = self
                         .textures
                         .get(texture_id)
-                        .ok_or_else(|| RendererError::BadTexture(texture_id))?;
+                        .ok_or(RendererError::BadTexture(texture_id))?;
                     rpass.set_bind_group(1, &tex.bind_group, &[]);
 
                     // Set scissors on the renderpass.

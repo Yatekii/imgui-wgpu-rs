@@ -2,7 +2,6 @@ use futures::executor::block_on;
 use image::ImageFormat;
 use imgui::*;
 use imgui_wgpu::{RendererConfig, TextureConfig};
-use imgui_winit_support;
 use std::time::Instant;
 use winit::{
     dpi::LogicalSize,
