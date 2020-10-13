@@ -260,7 +260,7 @@ impl Texture {
     }
 }
 
-/// Congiguration for the renderer.
+/// Configuration for the renderer.
 pub struct RendererConfig<'vs, 'fs> {
     texture_format: TextureFormat,
     depth_format: Option<TextureFormat>,
@@ -284,10 +284,22 @@ impl RendererConfig<'_, '_> {
         }
     }
 
-    /// Create a new renderer config with precompiled default shaders.
+    /// Create a new renderer config with precompiled default shaders outputting linear color.
+    ///
+    /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
     pub fn new() -> RendererConfig<'static, 'static> {
         Self::with_shaders(
-            include_spirv!("imgui.vert.spv"),
+            include_spirv!("imgui-linear.vert.spv"),
+            include_spirv!("imgui.frag.spv"),
+        )
+    }
+
+    /// Create a new renderer config with precompiled default shaders outputting srgb color.
+    ///
+    /// If you write to a Bgra8Unorm framebuffer, this is what you want.
+    pub fn new_srgb() -> RendererConfig<'static, 'static> {
+        Self::with_shaders(
+            include_spirv!("imgui-srgb.vert.spv"),
             include_spirv!("imgui.frag.spv"),
         )
     }
@@ -457,7 +469,7 @@ impl Renderer {
                 vertex_buffers: &[VertexBufferDescriptor {
                     stride: size_of::<DrawVert>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
-                    attributes: &vertex_attr_array![0 => Float2, 1 => Float2, 2 => Uint],
+                    attributes: &vertex_attr_array![0 => Float2, 1 => Float2, 2 => Uchar4Norm],
                 }],
             },
             sample_count,
