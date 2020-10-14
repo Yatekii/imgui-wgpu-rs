@@ -289,8 +289,8 @@ impl RendererConfig<'_, '_> {
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
     pub fn new() -> RendererConfig<'static, 'static> {
         Self::with_shaders(
-            include_spirv!("imgui-linear.vert.spv"),
-            include_spirv!("imgui.frag.spv"),
+            include_spirv!("imgui.vert.spv"),
+            include_spirv!("imgui-linear.frag.spv"),
         )
     }
 
@@ -299,8 +299,8 @@ impl RendererConfig<'_, '_> {
     /// If you write to a Bgra8Unorm framebuffer, this is what you want.
     pub fn new_srgb() -> RendererConfig<'static, 'static> {
         Self::with_shaders(
-            include_spirv!("imgui-srgb.vert.spv"),
-            include_spirv!("imgui.frag.spv"),
+            include_spirv!("imgui.vert.spv"),
+            include_spirv!("imgui-srgb.frag.spv"),
         )
     }
 
