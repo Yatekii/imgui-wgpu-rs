@@ -374,7 +374,7 @@ fn main() {
 
     let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
 
-    let (window, mut size, surface) = {
+    let (window, size, surface) = {
         let version = env!("CARGO_PKG_VERSION");
 
         let window = Window::new(&event_loop).unwrap();
@@ -390,7 +390,7 @@ fn main() {
         (window, size, surface)
     };
 
-    let mut hidpi_factor = window.scale_factor();
+    let hidpi_factor = window.scale_factor();
 
     let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::HighPerformance,
@@ -409,7 +409,7 @@ fn main() {
     .unwrap();
 
     // Set up swap chain
-    let mut sc_desc = wgpu::SwapChainDescriptor {
+    let sc_desc = wgpu::SwapChainDescriptor {
         usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
@@ -490,18 +490,10 @@ fn main() {
         };
         match event {
             Event::WindowEvent {
-                event: WindowEvent::ScaleFactorChanged { scale_factor, .. },
-                ..
-            } => {
-                hidpi_factor = scale_factor;
-            }
-            Event::WindowEvent {
                 event: WindowEvent::Resized(_),
                 ..
             } => {
-                size = window.inner_size();
-
-                sc_desc = wgpu::SwapChainDescriptor {
+                let sc_desc = wgpu::SwapChainDescriptor {
                     usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,
@@ -563,37 +555,34 @@ fn main() {
                         imgui::Image::new(example_texture_id, new_example_size.unwrap()).build(&ui);
                     });
 
-                match new_example_size {
-                    Some(size) => {
-                        // Resize render target, which is optional
-                        if size != example_size && size[0] >= 1.0 && size[1] >= 1.0 {
-                            example_size = size;
-                            let scale = &ui.io().display_framebuffer_scale;
-                            let texture_config = TextureConfig {
-                                size: Extent3d {
-                                    width: (example_size[0] * scale[0]) as u32,
-                                    height: (example_size[1] * scale[1]) as u32,
-                                    ..Default::default()
-                                },
-                                usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT
-                                    | wgpu::TextureUsage::SAMPLED,
+                if let Some(size) = new_example_size {
+                    // Resize render target, which is optional
+                    if size != example_size && size[0] >= 1.0 && size[1] >= 1.0 {
+                        example_size = size;
+                        let scale = &ui.io().display_framebuffer_scale;
+                        let texture_config = TextureConfig {
+                            size: Extent3d {
+                                width: (example_size[0] * scale[0]) as u32,
+                                height: (example_size[1] * scale[1]) as u32,
                                 ..Default::default()
-                            };
-                            renderer.textures.replace(
-                                example_texture_id,
-                                Texture::new(&device, &renderer, texture_config),
-                            );
-                        }
-
-                        // Only render example to example_texture if thw window is not collapsed
-                        example.setup_camera(&queue, size);
-                        example.render(
-                            &renderer.textures.get(example_texture_id).unwrap().view(),
-                            &device,
-                            &queue,
+                            },
+                            usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT
+                                | wgpu::TextureUsage::SAMPLED,
+                            ..Default::default()
+                        };
+                        renderer.textures.replace(
+                            example_texture_id,
+                            Texture::new(&device, &renderer, texture_config),
                         );
                     }
-                    _ => {}
+
+                    // Only render example to example_texture if thw window is not collapsed
+                    example.setup_camera(&queue, size);
+                    example.render(
+                        &renderer.textures.get(example_texture_id).unwrap().view(),
+                        &device,
+                        &queue,
+                    );
                 }
 
                 let mut encoder: wgpu::CommandEncoder =

@@ -83,7 +83,7 @@ impl Texture {
         bind_group: BindGroup,
         size: Extent3d,
     ) -> Self {
-        Texture {
+        Self {
             texture,
             view,
             bind_group,
@@ -138,7 +138,7 @@ impl Texture {
             ],
         });
 
-        Texture {
+        Self {
             texture,
             view,
             bind_group,
@@ -237,18 +237,25 @@ impl Default for RendererConfig<'_, '_> {
     ///
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
     fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RendererConfig<'_, '_> {
+    /// Create a new renderer config with precompiled default shaders outputting linear color.
+    ///
+    /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
+    pub fn new() -> Self {
         Self::with_shaders(
             include_spirv!("imgui.vert.spv"),
             include_spirv!("imgui-linear.frag.spv"),
         )
     }
-}
 
-impl RendererConfig<'_, '_> {
     /// Create a new renderer config with precompiled default shaders outputting srgb color.
     ///
     /// If you write to a Bgra8Unorm framebuffer, this is what you want.
-    pub fn new_srgb() -> RendererConfig<'static, 'static> {
+    pub fn new_srgb() -> Self {
         Self::with_shaders(
             include_spirv!("imgui.vert.spv"),
             include_spirv!("imgui-srgb.frag.spv"),
@@ -275,7 +282,7 @@ impl Renderer {
         device: &Device,
         queue: &Queue,
         config: RendererConfig,
-    ) -> Renderer {
+    ) -> Self {
         let RendererConfig {
             texture_format,
             depth_format,
@@ -405,7 +412,7 @@ impl Renderer {
             alpha_to_coverage_enabled: false,
         });
 
-        let mut renderer = Renderer {
+        let mut renderer = Self {
             pipeline,
             uniform_buffer,
             uniform_bind_group,
@@ -512,38 +519,35 @@ impl Renderer {
         rpass.set_vertex_buffer(0, vertex_buffer.slice(..));
 
         for cmd in draw_list.commands() {
-            match cmd {
-                Elements { count, cmd_params } => {
-                    let clip_rect = [
-                        (cmd_params.clip_rect[0] - clip_off[0]) * clip_scale[0],
-                        (cmd_params.clip_rect[1] - clip_off[1]) * clip_scale[1],
-                        (cmd_params.clip_rect[2] - clip_off[0]) * clip_scale[0],
-                        (cmd_params.clip_rect[3] - clip_off[1]) * clip_scale[1],
-                    ];
+            if let Elements { count, cmd_params } = cmd {
+                let clip_rect = [
+                    (cmd_params.clip_rect[0] - clip_off[0]) * clip_scale[0],
+                    (cmd_params.clip_rect[1] - clip_off[1]) * clip_scale[1],
+                    (cmd_params.clip_rect[2] - clip_off[0]) * clip_scale[0],
+                    (cmd_params.clip_rect[3] - clip_off[1]) * clip_scale[1],
+                ];
 
-                    // Set the current texture bind group on the renderpass.
-                    let texture_id = cmd_params.texture_id;
-                    let tex = self
-                        .textures
-                        .get(texture_id)
-                        .ok_or(RendererError::BadTexture(texture_id))?;
-                    rpass.set_bind_group(1, &tex.bind_group, &[]);
+                // Set the current texture bind group on the renderpass.
+                let texture_id = cmd_params.texture_id;
+                let tex = self
+                    .textures
+                    .get(texture_id)
+                    .ok_or(RendererError::BadTexture(texture_id))?;
+                rpass.set_bind_group(1, &tex.bind_group, &[]);
 
-                    // Set scissors on the renderpass.
-                    let scissors = (
-                        clip_rect[0].max(0.0).floor() as u32,
-                        clip_rect[1].max(0.0).floor() as u32,
-                        (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
-                        (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
-                    );
-                    rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
+                // Set scissors on the renderpass.
+                let scissors = (
+                    clip_rect[0].max(0.0).floor() as u32,
+                    clip_rect[1].max(0.0).floor() as u32,
+                    (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
+                    (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
+                );
+                rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
 
-                    // Draw the current batch of vertices with the renderpass.
-                    let end = start + count as u32;
-                    rpass.draw_indexed(start..end, 0, 0..1);
-                    start = end;
-                }
-                _ => {}
+                // Draw the current batch of vertices with the renderpass.
+                let end = start + count as u32;
+                rpass.draw_indexed(start..end, 0, 0..1);
+                start = end;
             }
         }
         Ok(())

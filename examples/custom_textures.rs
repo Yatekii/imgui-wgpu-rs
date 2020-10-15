@@ -19,7 +19,7 @@ fn main() {
 
     let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
 
-    let (window, mut size, surface) = {
+    let (window, size, surface) = {
         let version = env!("CARGO_PKG_VERSION");
 
         let window = Window::new(&event_loop).unwrap();
@@ -35,7 +35,7 @@ fn main() {
         (window, size, surface)
     };
 
-    let mut hidpi_factor = window.scale_factor();
+    let hidpi_factor = window.scale_factor();
 
     let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::HighPerformance,
@@ -54,7 +54,7 @@ fn main() {
     .unwrap();
 
     // Set up swap chain
-    let mut sc_desc = wgpu::SwapChainDescriptor {
+    let sc_desc = wgpu::SwapChainDescriptor {
         usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
@@ -138,18 +138,10 @@ fn main() {
         };
         match event {
             Event::WindowEvent {
-                event: WindowEvent::ScaleFactorChanged { scale_factor, .. },
-                ..
-            } => {
-                hidpi_factor = scale_factor;
-            }
-            Event::WindowEvent {
                 event: WindowEvent::Resized(_),
                 ..
             } => {
-                size = window.inner_size();
-
-                sc_desc = wgpu::SwapChainDescriptor {
+                let sc_desc = wgpu::SwapChainDescriptor {
                     usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,
