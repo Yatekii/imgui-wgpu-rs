@@ -1,8 +1,9 @@
 use futures::executor::block_on;
 use image::ImageFormat;
 use imgui::*;
-use imgui_wgpu::{RendererConfig, TextureConfig};
+use imgui_wgpu::{Renderer, RendererConfig, Texture, TextureConfig};
 use std::time::Instant;
+use wgpu::Extent3d;
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -18,7 +19,7 @@ fn main() {
 
     let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
 
-    let (window, mut size, surface) = {
+    let (window, size, surface) = {
         let version = env!("CARGO_PKG_VERSION");
 
         let window = Window::new(&event_loop).unwrap();
@@ -34,7 +35,7 @@ fn main() {
         (window, size, surface)
     };
 
-    let mut hidpi_factor = window.scale_factor();
+    let hidpi_factor = window.scale_factor();
 
     let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::HighPerformance,
@@ -53,7 +54,7 @@ fn main() {
     .unwrap();
 
     // Set up swap chain
-    let mut sc_desc = wgpu::SwapChainDescriptor {
+    let sc_desc = wgpu::SwapChainDescriptor {
         usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
@@ -94,9 +95,12 @@ fn main() {
         b: 0.3,
         a: 1.0,
     };
-    let mut renderer = RendererConfig::new()
-        .set_texture_format(sc_desc.format)
-        .build(&mut imgui, &device, &queue);
+    let renderer_config = RendererConfig {
+        texture_format: sc_desc.format,
+        ..Default::default()
+    };
+
+    let mut renderer = Renderer::new(&mut imgui, &device, &queue, renderer_config);
 
     let mut last_frame = Instant::now();
 
@@ -108,9 +112,17 @@ fn main() {
     let (width, height) = image.dimensions();
     let raw_data = image.into_raw();
 
-    let texture = TextureConfig::new(width, height)
-        .set_label("lenna texture")
-        .build(&device, &renderer);
+    let texture_config = TextureConfig {
+        size: Extent3d {
+            width,
+            height,
+            ..Default::default()
+        },
+        label: Some("lenna texture"),
+        ..Default::default()
+    };
+
+    let texture = Texture::new(&device, &renderer, texture_config);
 
     texture.write(&queue, &raw_data, width, height);
     let lenna_texture_id = renderer.textures.insert(texture);
@@ -126,18 +138,10 @@ fn main() {
         };
         match event {
             Event::WindowEvent {
-                event: WindowEvent::ScaleFactorChanged { scale_factor, .. },
-                ..
-            } => {
-                hidpi_factor = scale_factor;
-            }
-            Event::WindowEvent {
                 event: WindowEvent::Resized(_),
                 ..
             } => {
-                size = window.inner_size();
-
-                sc_desc = wgpu::SwapChainDescriptor {
+                let sc_desc = wgpu::SwapChainDescriptor {
                     usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,

@@ -1,7 +1,7 @@
 use futures::executor::block_on;
 use imgui::*;
-use imgui_wgpu::RendererConfig;
-use imgui_winit_support;
+use imgui_wgpu::{Renderer, RendererConfig};
+
 use std::time::Instant;
 use winit::{
     dpi::LogicalSize,
@@ -18,7 +18,7 @@ fn main() {
 
     let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
 
-    let (window, mut size, surface) = {
+    let (window, size, surface) = {
         let version = env!("CARGO_PKG_VERSION");
 
         let window = Window::new(&event_loop).unwrap();
@@ -34,7 +34,7 @@ fn main() {
         (window, size, surface)
     };
 
-    let mut hidpi_factor = window.scale_factor();
+    let hidpi_factor = window.scale_factor();
 
     let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::HighPerformance,
@@ -53,7 +53,7 @@ fn main() {
     .unwrap();
 
     // Set up swap chain
-    let mut sc_desc = wgpu::SwapChainDescriptor {
+    let sc_desc = wgpu::SwapChainDescriptor {
         usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
@@ -95,9 +95,12 @@ fn main() {
         a: 1.0,
     };
 
-    let mut renderer = RendererConfig::new()
-        .set_texture_format(sc_desc.format)
-        .build(&mut imgui, &device, &queue);
+    let renderer_config = RendererConfig {
+        texture_format: sc_desc.format,
+        ..Default::default()
+    };
+
+    let mut renderer = Renderer::new(&mut imgui, &device, &queue, renderer_config);
 
     let mut last_frame = Instant::now();
     let mut demo_open = true;
@@ -113,18 +116,10 @@ fn main() {
         };
         match event {
             Event::WindowEvent {
-                event: WindowEvent::ScaleFactorChanged { scale_factor, .. },
-                ..
-            } => {
-                hidpi_factor = scale_factor;
-            }
-            Event::WindowEvent {
                 event: WindowEvent::Resized(_),
                 ..
             } => {
-                size = window.inner_size();
-
-                sc_desc = wgpu::SwapChainDescriptor {
+                let sc_desc = wgpu::SwapChainDescriptor {
                     usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,

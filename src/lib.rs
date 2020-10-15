@@ -48,13 +48,13 @@ pub struct TextureConfig<'a> {
     pub dimension: TextureDimension,
 }
 
-impl<'a> TextureConfig<'a> {
-    /// Create a new texture config with the specified `width` and `height`.
-    pub fn new(width: u32, height: u32) -> TextureConfig<'static> {
-        TextureConfig {
+impl<'a> Default for TextureConfig<'a> {
+    /// Create a new texture config.
+    fn default() -> Self {
+        Self {
             size: Extent3d {
-                width,
-                height,
+                width: 0,
+                height: 0,
                 depth: 1,
             },
             label: None,
@@ -64,59 +64,6 @@ impl<'a> TextureConfig<'a> {
             sample_count: 1,
             dimension: TextureDimension::D2,
         }
-    }
-
-    /// Set the depth of the texture.
-    pub fn set_depth(mut self, depth: u32) -> Self {
-        self.size.depth = depth;
-        self
-    }
-
-    /// Set the debug label of the texture.
-    pub fn set_label<'b>(mut self, label: &'b str) -> TextureConfig<'b> {
-        self.label = None;
-
-        // Change the lifetime from 'a to 'b.
-        // Safe because there is guaranteed to be no reference in `label`.
-        let mut result: TextureConfig<'b> = unsafe { std::mem::transmute(self) };
-
-        result.label = Some(label);
-        result
-    }
-
-    /// Set the texture format.
-    pub fn set_format(mut self, format: TextureFormat) -> Self {
-        self.format = Some(format);
-        self
-    }
-
-    /// Set the texture usage.
-    pub fn set_usage(mut self, usage: TextureUsage) -> Self {
-        self.usage = usage;
-        self
-    }
-
-    /// Set the texture mip level.
-    pub fn set_mip_level_count(mut self, mip_level_count: u32) -> Self {
-        self.mip_level_count = mip_level_count;
-        self
-    }
-
-    /// Set the texture sample count.
-    pub fn set_sample_count(mut self, sample_count: u32) -> Self {
-        self.sample_count = sample_count;
-        self
-    }
-
-    /// Set the texture dimension.
-    pub fn set_dimension(mut self, dimension: TextureDimension) -> Self {
-        self.dimension = dimension;
-        self
-    }
-
-    /// Build a new `Texture` consuming this config.
-    pub fn build(self, device: &Device, renderer: &Renderer) -> Texture {
-        Texture::new(device, renderer, self)
     }
 }
 
@@ -136,7 +83,7 @@ impl Texture {
         bind_group: BindGroup,
         size: Extent3d,
     ) -> Self {
-        Texture {
+        Self {
             texture,
             view,
             bind_group,
@@ -191,7 +138,7 @@ impl Texture {
             ],
         });
 
-        Texture {
+        Self {
             texture,
             view,
             bind_group,
@@ -262,11 +209,11 @@ impl Texture {
 
 /// Configuration for the renderer.
 pub struct RendererConfig<'vs, 'fs> {
-    texture_format: TextureFormat,
-    depth_format: Option<TextureFormat>,
-    sample_count: u32,
-    vertex_shader: Option<ShaderModuleSource<'vs>>,
-    fragment_shader: Option<ShaderModuleSource<'fs>>,
+    pub texture_format: TextureFormat,
+    pub depth_format: Option<TextureFormat>,
+    pub sample_count: u32,
+    pub vertex_shader: Option<ShaderModuleSource<'vs>>,
+    pub fragment_shader: Option<ShaderModuleSource<'fs>>,
 }
 
 impl RendererConfig<'_, '_> {
@@ -283,11 +230,22 @@ impl RendererConfig<'_, '_> {
             fragment_shader: Some(fragment_shader),
         }
     }
+}
 
+impl Default for RendererConfig<'_, '_> {
     /// Create a new renderer config with precompiled default shaders outputting linear color.
     ///
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
-    pub fn new() -> RendererConfig<'static, 'static> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RendererConfig<'_, '_> {
+    /// Create a new renderer config with precompiled default shaders outputting linear color.
+    ///
+    /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
+    pub fn new() -> Self {
         Self::with_shaders(
             include_spirv!("imgui.vert.spv"),
             include_spirv!("imgui-linear.frag.spv"),
@@ -297,34 +255,11 @@ impl RendererConfig<'_, '_> {
     /// Create a new renderer config with precompiled default shaders outputting srgb color.
     ///
     /// If you write to a Bgra8Unorm framebuffer, this is what you want.
-    pub fn new_srgb() -> RendererConfig<'static, 'static> {
+    pub fn new_srgb() -> Self {
         Self::with_shaders(
             include_spirv!("imgui.vert.spv"),
             include_spirv!("imgui-srgb.frag.spv"),
         )
-    }
-
-    /// Set the texture format used by the renderer.
-    pub fn set_texture_format(mut self, texture_format: TextureFormat) -> Self {
-        self.texture_format = texture_format;
-        self
-    }
-
-    /// Set the depth format used by the renderer.
-    pub fn set_depth_format(mut self, depth_format: TextureFormat) -> Self {
-        self.depth_format = Some(depth_format);
-        self
-    }
-
-    /// Set the sample count used by the renderer.
-    pub fn set_sample_count(mut self, sample_count: u32) -> Self {
-        self.sample_count = sample_count;
-        self
-    }
-
-    /// Build a new `Renderer` consuming this config.
-    pub fn build(self, imgui: &mut Context, device: &Device, queue: &Queue) -> Renderer {
-        Renderer::new(imgui, device, queue, self)
     }
 }
 
@@ -347,7 +282,7 @@ impl Renderer {
         device: &Device,
         queue: &Queue,
         config: RendererConfig,
-    ) -> Renderer {
+    ) -> Self {
         let RendererConfig {
             texture_format,
             depth_format,
@@ -477,7 +412,7 @@ impl Renderer {
             alpha_to_coverage_enabled: false,
         });
 
-        let mut renderer = Renderer {
+        let mut renderer = Self {
             pipeline,
             uniform_buffer,
             uniform_bind_group,
@@ -584,38 +519,35 @@ impl Renderer {
         rpass.set_vertex_buffer(0, vertex_buffer.slice(..));
 
         for cmd in draw_list.commands() {
-            match cmd {
-                Elements { count, cmd_params } => {
-                    let clip_rect = [
-                        (cmd_params.clip_rect[0] - clip_off[0]) * clip_scale[0],
-                        (cmd_params.clip_rect[1] - clip_off[1]) * clip_scale[1],
-                        (cmd_params.clip_rect[2] - clip_off[0]) * clip_scale[0],
-                        (cmd_params.clip_rect[3] - clip_off[1]) * clip_scale[1],
-                    ];
+            if let Elements { count, cmd_params } = cmd {
+                let clip_rect = [
+                    (cmd_params.clip_rect[0] - clip_off[0]) * clip_scale[0],
+                    (cmd_params.clip_rect[1] - clip_off[1]) * clip_scale[1],
+                    (cmd_params.clip_rect[2] - clip_off[0]) * clip_scale[0],
+                    (cmd_params.clip_rect[3] - clip_off[1]) * clip_scale[1],
+                ];
 
-                    // Set the current texture bind group on the renderpass.
-                    let texture_id = cmd_params.texture_id;
-                    let tex = self
-                        .textures
-                        .get(texture_id)
-                        .ok_or(RendererError::BadTexture(texture_id))?;
-                    rpass.set_bind_group(1, &tex.bind_group, &[]);
+                // Set the current texture bind group on the renderpass.
+                let texture_id = cmd_params.texture_id;
+                let tex = self
+                    .textures
+                    .get(texture_id)
+                    .ok_or(RendererError::BadTexture(texture_id))?;
+                rpass.set_bind_group(1, &tex.bind_group, &[]);
 
-                    // Set scissors on the renderpass.
-                    let scissors = (
-                        clip_rect[0].max(0.0).floor() as u32,
-                        clip_rect[1].max(0.0).floor() as u32,
-                        (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
-                        (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
-                    );
-                    rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
+                // Set scissors on the renderpass.
+                let scissors = (
+                    clip_rect[0].max(0.0).floor() as u32,
+                    clip_rect[1].max(0.0).floor() as u32,
+                    (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
+                    (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
+                );
+                rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
 
-                    // Draw the current batch of vertices with the renderpass.
-                    let end = start + count as u32;
-                    rpass.draw_indexed(start..end, 0, 0..1);
-                    start = end;
-                }
-                _ => {}
+                // Draw the current batch of vertices with the renderpass.
+                let end = start + count as u32;
+                rpass.draw_indexed(start..end, 0, 0..1);
+                start = end;
             }
         }
         Ok(())
@@ -663,9 +595,17 @@ impl Renderer {
 
         // Create font texture and upload it.
         let handle = fonts.build_rgba32_texture();
-        let font_texture = TextureConfig::new(handle.width, handle.height)
-            .set_label("imgui-wgpu font atlas")
-            .build(&device, self);
+        let font_texture_cnfig = TextureConfig {
+            label: Some("imgui-wgpu font atlas"),
+            size: Extent3d {
+                width: handle.width,
+                height: handle.height,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        let font_texture = Texture::new(device, self, font_texture_cnfig);
         font_texture.write(&queue, handle.data, handle.width, handle.height);
         fonts.tex_id = self.textures.insert(font_texture);
         // Clear imgui texture data to save memory.
