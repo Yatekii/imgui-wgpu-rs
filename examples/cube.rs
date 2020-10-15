@@ -1,9 +1,9 @@
 use bytemuck::{Pod, Zeroable};
 use futures::executor::block_on;
 use imgui::*;
-use imgui_wgpu::{RendererConfig, TextureConfig};
+use imgui_wgpu::{Renderer, RendererConfig, Texture, TextureConfig};
 use std::time::Instant;
-use wgpu::util::DeviceExt;
+use wgpu::{util::DeviceExt, Extent3d};
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -451,9 +451,12 @@ fn main() {
     //     a: 1.0,
     // };
 
-    let mut renderer = RendererConfig::new()
-        .set_texture_format(sc_desc.format)
-        .build(&mut imgui, &device, &queue);
+    let renderer_config = RendererConfig {
+        texture_format: sc_desc.format,
+        ..Default::default()
+    };
+
+    let mut renderer = Renderer::new(&mut imgui, &device, &queue, renderer_config);
 
     let mut last_frame = Instant::now();
 
@@ -464,11 +467,19 @@ fn main() {
 
     // Stores a texture for displaying with imgui::Image(),
     // also as a texture view for rendering into it
-    let example_texture_id = renderer.textures.insert(
-        TextureConfig::new(example_size[0] as u32, example_size[1] as u32)
-            .set_usage(wgpu::TextureUsage::OUTPUT_ATTACHMENT | wgpu::TextureUsage::SAMPLED)
-            .build(&device, &renderer),
-    );
+
+    let texture_config = TextureConfig {
+        size: wgpu::Extent3d {
+            width: example_size[0] as u32,
+            height: example_size[1] as u32,
+            ..Default::default()
+        },
+        usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT | wgpu::TextureUsage::SAMPLED,
+        ..Default::default()
+    };
+
+    let texture = Texture::new(&device, &renderer, texture_config);
+    let example_texture_id = renderer.textures.insert(texture);
 
     // Event loop
     event_loop.run(move |event, _, control_flow| {
@@ -558,17 +569,19 @@ fn main() {
                         if size != example_size && size[0] >= 1.0 && size[1] >= 1.0 {
                             example_size = size;
                             let scale = &ui.io().display_framebuffer_scale;
+                            let texture_config = TextureConfig {
+                                size: Extent3d {
+                                    width: (example_size[0] * scale[0]) as u32,
+                                    height: (example_size[1] * scale[1]) as u32,
+                                    ..Default::default()
+                                },
+                                usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT
+                                    | wgpu::TextureUsage::SAMPLED,
+                                ..Default::default()
+                            };
                             renderer.textures.replace(
                                 example_texture_id,
-                                TextureConfig::new(
-                                    (example_size[0] * scale[0]) as u32,
-                                    (example_size[1] * scale[1]) as u32,
-                                )
-                                .set_usage(
-                                    wgpu::TextureUsage::OUTPUT_ATTACHMENT
-                                        | wgpu::TextureUsage::SAMPLED,
-                                )
-                                .build(&device, &renderer),
+                                Texture::new(&device, &renderer, texture_config),
                             );
                         }
 

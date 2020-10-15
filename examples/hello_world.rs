@@ -1,7 +1,7 @@
 use futures::executor::block_on;
 use imgui::*;
-use imgui_wgpu::RendererConfig;
-use imgui_winit_support;
+use imgui_wgpu::{Renderer, RendererConfig};
+
 use std::time::Instant;
 use winit::{
     dpi::LogicalSize,
@@ -95,9 +95,12 @@ fn main() {
         a: 1.0,
     };
 
-    let mut renderer = RendererConfig::new()
-        .set_texture_format(sc_desc.format)
-        .build(&mut imgui, &device, &queue);
+    let renderer_config = RendererConfig {
+        texture_format: sc_desc.format,
+        ..Default::default()
+    };
+
+    let mut renderer = Renderer::new(&mut imgui, &device, &queue, renderer_config);
 
     let mut last_frame = Instant::now();
     let mut demo_open = true;
