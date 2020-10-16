@@ -493,6 +493,8 @@ fn main() {
                 event: WindowEvent::Resized(_),
                 ..
             } => {
+                let size = window.inner_size();
+
                 let sc_desc = wgpu::SwapChainDescriptor {
                     usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
