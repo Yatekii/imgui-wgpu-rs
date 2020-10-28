@@ -1,0 +1,50 @@
+use imgui::{im_str, Condition};
+use imgui_wgpu::simple_api;
+
+#[derive(Debug)]
+struct State {
+    last_frame: std::time::Instant,
+    height: f32,
+    width: f32,
+    highdpi_factor: f64,
+}
+
+fn main() {
+    let config = simple_api::Config {
+        on_resize: &|input, state: &mut State, hdpi| {
+            state.height = input.height as f32;
+            state.width = input.width as f32;
+            state.highdpi_factor = hdpi;
+        },
+        ..Default::default()
+    };
+
+    let state = State {
+        last_frame: std::time::Instant::now(),
+        height: 100.0,
+        width: 100.0,
+        highdpi_factor: 2.0,
+    };
+
+    imgui_wgpu::simple_api::run(config, state, |ui, state| {
+        let now = std::time::Instant::now();
+
+        imgui::Window::new(im_str!("full-window example"))
+            .position([0.0, 0.0], Condition::Always)
+            .collapsible(false)
+            .resizable(false)
+            .size(
+                [
+                    state.width / state.highdpi_factor as f32,
+                    state.height / state.highdpi_factor as f32,
+                ],
+                Condition::Always,
+            )
+            .menu_bar(true)
+            .build(&ui, || {
+                ui.text(im_str!("Hello world!"));
+            });
+
+        state.last_frame = now;
+    });
+}

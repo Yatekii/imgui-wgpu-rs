@@ -20,7 +20,10 @@ exclude = [
 ]
 
 [features]
-default = []
+# used in src/simple_api.rs
+simple_api_unstable = [ "winit", "futures", "imgui-winit-support" ]
+
+default = ["simple_api_unstable"] # TOOO unset after review, just testing
 
 [dependencies]
 wgpu = "0.6"
@@ -28,6 +31,11 @@ log = "0.4"
 imgui = "0.6"
 bytemuck = "1"
 smallvec = "1"
+
+# deps for simple_api_unstable
+winit = { version = "0.22", optional = true }
+futures = { version = "0.3", optional = true }
+imgui-winit-support = { version = "0.5", default-featues = false, featues = ["winit-22"], optional = true}
 
 [dev-dependencies]
 wgpu-subscriber = "0.1"

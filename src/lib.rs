@@ -8,6 +8,9 @@ use wgpu::*;
 
 pub type RendererResult<T> = Result<T, RendererError>;
 
+#[cfg(feature = "simple_api_unstable")]
+pub mod simple_api;
+
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone)]
 struct DrawVertPod(DrawVert);
