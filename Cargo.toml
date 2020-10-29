@@ -45,7 +45,12 @@ image = "0.23"
 futures = "0.3"
 cgmath = "0.17"
 bytemuck = { version = "1.4", features = ["derive"] }
-imgui-winit-support = "0.6"
+implot = "*"
+
+[dev-dependencies.imgui-winit-support]
+version = "0.5"
+default-features = false
+features = ["winit-22"]
 
 [package.metadata.docs.rs]
 all-features = true
