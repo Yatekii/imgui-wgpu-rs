@@ -1,3 +1,6 @@
+// you need to set --feature=simple_api_unstable to run this example
+// cargo run --example fullscreen_simple_api --features=simple_api_unstable
+
 use imgui::{im_str, Condition};
 use imgui_wgpu::simple_api;
 
@@ -47,22 +50,22 @@ fn main() {
             .build(&ui, || {
                 ui.text(im_str!("Hello world!"));
 
-                // begin implot
-                let plot_ui = &state.plotcontext.get_plot_ui();
+                // implot example
+                {
+                    let plot_ui = &state.plotcontext.get_plot_ui();
 
-                let content_width = ui.window_content_region_width();
-                implot::Plot::new("Simple line plot")
-                    // The size call could also be omitted, though the defaults don't consider window
-                    // width, which is why we're not doing so here.
-                    .size(content_width, 300.0)
-                    .build(plot_ui, || {
-                        // If this is called outside a plot build callback, the program will panic.
-                        let x_positions = vec![0.1, 0.9];
-                        let y_positions = vec![0.1, 0.9];
-                        implot::PlotLine::new("legend label").plot(&x_positions, &y_positions);
-                    });
-
-                // end implot
+                    let content_width = ui.window_content_region_width();
+                    implot::Plot::new("Simple line plot")
+                        // The size call could also be omitted, though the defaults don't consider window
+                        // width, which is why we're not doing so here.
+                        .size(content_width, 300.0)
+                        .build(plot_ui, || {
+                            // If this is called outside a plot build callback, the program will panic.
+                            let x_positions = vec![0.1, 0.9];
+                            let y_positions = vec![0.1, 0.9];
+                            implot::PlotLine::new("legend label").plot(&x_positions, &y_positions);
+                        });
+                }
             });
 
         state.last_frame = now;

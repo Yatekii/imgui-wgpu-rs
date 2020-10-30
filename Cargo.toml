@@ -23,7 +23,7 @@ exclude = [
 # used in src/simple_api.rs
 simple_api_unstable = [ "winit", "futures", "imgui-winit-support" ]
 
-default = ["simple_api_unstable"] # TOOO unset after review, just testing
+default = []
 
 [dependencies]
 wgpu = "0.6"
@@ -45,7 +45,7 @@ image = "0.23"
 futures = "0.3"
 cgmath = "0.17"
 bytemuck = { version = "1.4", features = ["derive"] }
-implot = "*"
+implot = { version = "0.2", git = "https://github.com/4bb4/implot-rs" } # not published yet
 
 [dev-dependencies.imgui-winit-support]
 version = "0.5"

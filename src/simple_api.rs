@@ -12,7 +12,7 @@ It is basically a wrapper around the hello world example with a few customizatio
 The API consists of a Config which you may not need to touch and just use the Default one.
 Optionally you can additionally provide you own Struct to have mutable state for you small application.
 
-```rust
+```no_run
 fn main() {
     imgui_wgpu::simple_api::run(Default::default(), (), |ui, _| {
         imgui::Window::new(imgui::im_str!("hwllo world")).build(&ui, || {
