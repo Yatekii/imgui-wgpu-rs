@@ -42,15 +42,8 @@ fn main() {
     }))
     .unwrap();
 
-    let (device, queue) = block_on(adapter.request_device(
-        &wgpu::DeviceDescriptor {
-            features: wgpu::Features::empty(),
-            limits: wgpu::Limits::default(),
-            shader_validation: false,
-        },
-        None,
-    ))
-    .unwrap();
+    let (device, queue) =
+        block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None)).unwrap();
 
     // Set up swap chain
     let sc_desc = wgpu::SwapChainDescriptor {

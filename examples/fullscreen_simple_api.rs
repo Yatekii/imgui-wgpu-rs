@@ -8,7 +8,7 @@ struct State {
     last_frame: std::time::Instant,
     height: f32,
     width: f32,
-    highdpi_factor: f64,
+    high_dpi_factor: f64,
     plotcontext: implot::Context,
 }
 
@@ -17,7 +17,7 @@ fn main() {
         on_resize: &|input, state: &mut State, hdpi| {
             state.height = input.height as f32;
             state.width = input.width as f32;
-            state.highdpi_factor = hdpi;
+            state.high_dpi_factor = hdpi;
         },
         ..Default::default()
     };
@@ -28,7 +28,7 @@ fn main() {
         last_frame: std::time::Instant::now(),
         height: 100.0,
         width: 100.0,
-        highdpi_factor: 2.0,
+        high_dpi_factor: 2.0,
         plotcontext,
     };
 
@@ -41,8 +41,8 @@ fn main() {
             .resizable(false)
             .size(
                 [
-                    state.width / state.highdpi_factor as f32,
-                    state.height / state.highdpi_factor as f32,
+                    state.width / state.high_dpi_factor as f32,
+                    state.height / state.high_dpi_factor as f32,
                 ],
                 Condition::Always,
             )

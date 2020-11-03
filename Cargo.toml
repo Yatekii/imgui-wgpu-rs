@@ -21,7 +21,7 @@ exclude = [
 
 [features]
 # used in src/simple_api.rs
-simple_api_unstable = [ "winit", "futures", "imgui-winit-support" ]
+simple_api_unstable = [ "winit", "pollster", "imgui-winit-support" ]
 
 default = []
 
@@ -34,7 +34,7 @@ smallvec = "1"
 
 # deps for simple_api_unstable
 winit = { version = "0.22", optional = true }
-futures = { version = "0.3", optional = true }
+pollster = { version = "0.2.0", optional = true } # for block_on executor
 imgui-winit-support = { version = "0.5", default-featues = false, featues = ["winit-22"], optional = true}
 
 [dev-dependencies]

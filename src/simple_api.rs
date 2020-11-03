@@ -3,19 +3,19 @@ A simple API to get an imgui context in only a few lines of code.
 
 
 This API only provides stability on a best efforts basis because its meant for small/ temporary projects like if you need to quickly plot something
-and just need a context do do some imgui work.
+and just need a context do some imgui work.
 
-It aims to make updating the wgpu imgui bindings easier as it abstracts all the setup. This comes with the drawback of yet another API.
+It aims to make updating the wgpu imgui bindings easier to use as it abstracts all the setup. This comes with the drawback of yet another API.
 
 It is basically a wrapper around the hello world example with a few customization options.
 
 The API consists of a Config which you may not need to touch and just use the Default one.
-Optionally you can additionally provide you own Struct to have mutable state for you small application.
+Optionally, you can provide your own Struct to have a place to store mutable state in your small application.
 
 ```no_run
 fn main() {
     imgui_wgpu::simple_api::run(Default::default(), (), |ui, _| {
-        imgui::Window::new(imgui::im_str!("hwllo world")).build(&ui, || {
+        imgui::Window::new(imgui::im_str!("hello world")).build(&ui, || {
             ui.text(imgui::im_str!("Hello world!"));
         });
     });
@@ -24,8 +24,8 @@ fn main() {
 */
 
 use crate::{Renderer, RendererConfig};
-use futures::executor::block_on;
 use imgui::*;
+use pollster::block_on;
 
 use std::time::Instant;
 use winit::{
@@ -92,7 +92,7 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
             width: config.initial_window_width,
             height: config.initial_window_height,
         });
-        window.set_title(&format!("{}", config.window_title));
+        window.set_title(&config.window_title);
         let size = window.inner_size();
 
         let surface = unsafe { instance.create_surface(&window) };
@@ -108,15 +108,8 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
     }))
     .unwrap();
 
-    let (device, queue) = block_on(adapter.request_device(
-        &wgpu::DeviceDescriptor {
-            features: wgpu::Features::empty(),
-            limits: wgpu::Limits::default(),
-            shader_validation: false,
-        },
-        None,
-    ))
-    .unwrap();
+    let (device, queue) =
+        block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None)).unwrap();
 
     // Set up swap chain
     let sc_desc = wgpu::SwapChainDescriptor {
@@ -124,7 +117,8 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
         height: size.height as u32,
-        present_mode: wgpu::PresentMode::Mailbox,
+        // limits refresh rate to the monitor's refresh rate, not wasting power spinning very quickly
+        present_mode: wgpu::PresentMode::Fifo,
     };
 
     let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
