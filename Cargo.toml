@@ -12,6 +12,13 @@ categories = ["gui", "graphics", "rendering", "rendering::graphics-api"]
 keywords = ["gui", "graphics", "wgpu", "imgui"]
 license = "MIT OR Apache-2.0"
 
+exclude = [
+	".gitignore",
+	".github",
+	"examples",
+	"resources",
+]
+
 [features]
 default = []
 
