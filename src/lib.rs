@@ -2,6 +2,8 @@ use imgui::{
     Context, DrawCmd::Elements, DrawData, DrawIdx, DrawList, DrawVert, TextureId, Textures,
 };
 use smallvec::SmallVec;
+use std::error::Error;
+use std::fmt;
 use std::mem::size_of;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
@@ -22,6 +24,18 @@ unsafe impl bytemuck::Pod for DrawVertPod {}
 pub enum RendererError {
     BadTexture(TextureId),
 }
+
+impl fmt::Display for RendererError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            RendererError::BadTexture(id) => {
+                write!(f, "imgui render error: bad texture id '{}'", id.id())
+            }
+        }
+    }
+}
+
+impl Error for RendererError {}
 
 #[allow(dead_code)]
 enum ShaderStage {
