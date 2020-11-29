@@ -20,6 +20,9 @@ exclude = [
 ]
 
 [features]
+# used in src/simple_api.rs
+simple_api_unstable = [ "winit", "pollster", "imgui-winit-support" ]
+
 default = []
 
 [dependencies]
@@ -29,6 +32,11 @@ imgui = "0.6"
 bytemuck = "1"
 smallvec = "1"
 
+# deps for simple_api_unstable
+winit = { version = "0.23", optional = true }
+pollster = { version = "0.2.0", optional = true } # for block_on executor
+imgui-winit-support = { version = "0.6", optional = true }
+
 [dev-dependencies]
 wgpu-subscriber = "0.1"
 winit = "0.23"
@@ -37,7 +45,6 @@ image = "0.23"
 futures = "0.3"
 cgmath = "0.17"
 bytemuck = { version = "1.4", features = ["derive"] }
-imgui-winit-support = "0.6"
 
 [package.metadata.docs.rs]
 all-features = true
