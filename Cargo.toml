@@ -33,13 +33,14 @@ bytemuck = "1"
 smallvec = "1"
 
 # deps for simple_api_unstable
-winit = { version = "0.23", optional = true }
+winit = { version = "0.24", optional = true }
 pollster = { version = "0.2.0", optional = true } # for block_on executor
 imgui-winit-support = { version = "0.6", optional = true }
 
 [dev-dependencies]
 wgpu-subscriber = "0.1"
-winit = "0.23"
+winit = "0.24"
+imgui-winit-support = "0.6"
 raw-window-handle = "0.3"
 image = "0.23"
 futures = "0.3"
@@ -49,5 +50,7 @@ bytemuck = { version = "1.4", features = ["derive"] }
 [package.metadata.docs.rs]
 all-features = true
 
-# [patch.crates-io]
+[patch.crates-io]
 # wgpu = { version = "0.4", git = "https://github.com/gfx-rs/wgpu-rs.git", rev = "7b15e24" }
+imgui = { version = "0.6", git = "https://github.com/willemv/imgui-rs.git", rev = "8f924da7595ba" }
+imgui-winit-support = { version = "0.6", git = "https://github.com/willemv/imgui-rs.git", rev = "8f924da7595ba" }
