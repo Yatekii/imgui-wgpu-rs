@@ -10,6 +10,8 @@ and this project adheres to cargo's version of [Semantic Versioning](https://sem
 - [Diffs](#diffs)
 
 ## Unreleased
+#### Updated
+- `winit` to `0.24`
 
 ## v0.12.0
 
@@ -17,8 +19,8 @@ Released 2020-11-21
 
 #### Added
 - A changelog!
-- Shaders are now SRGB aware. Choose `RendererConfig::new()` to get shaders outputting in linear color 
-  and `RendererConfig::new_srgb()` for shaders outputting SRGB.	
+- Shaders are now SRGB aware. Choose `RendererConfig::new()` to get shaders outputting in linear color
+  and `RendererConfig::new_srgb()` for shaders outputting SRGB.
 
 #### Updated
 - `imgui` to `0.6`.
