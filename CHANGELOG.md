@@ -11,7 +11,7 @@ and this project adheres to cargo's version of [Semantic Versioning](https://sem
 
 ## Unreleased
 #### Updated
-- `winit` to `0.24`
+- support `winit` 0.24 as well as 0.23
 
 ## v0.12.0
 
