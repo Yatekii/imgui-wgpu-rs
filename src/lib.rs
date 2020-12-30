@@ -65,11 +65,28 @@ pub struct TextureConfig<'a> {
     pub sample_count: u32,
     /// The dimension of the texture.
     pub dimension: TextureDimension,
+    /// The sampler descriptor of the texture.
+    pub sampler_desc: SamplerDescriptor<'a>,
 }
 
 impl<'a> Default for TextureConfig<'a> {
     /// Create a new texture config.
     fn default() -> Self {
+        let sampler_desc = SamplerDescriptor {
+            label: Some("imgui-wgpu sampler"),
+            address_mode_u: AddressMode::ClampToEdge,
+            address_mode_v: AddressMode::ClampToEdge,
+            address_mode_w: AddressMode::ClampToEdge,
+            mag_filter: FilterMode::Linear,
+            min_filter: FilterMode::Linear,
+            mipmap_filter: FilterMode::Linear,
+            lod_min_clamp: -100.0,
+            lod_max_clamp: 100.0,
+            compare: None,
+            anisotropy_clamp: None,
+            border_color: None,
+        };
+
         Self {
             size: Extent3d {
                 width: 0,
@@ -82,6 +99,7 @@ impl<'a> Default for TextureConfig<'a> {
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
+            sampler_desc,
         }
     }
 }
@@ -127,20 +145,7 @@ impl Texture {
         let view = texture.create_view(&TextureViewDescriptor::default());
 
         // Create the texture sampler.
-        let sampler = device.create_sampler(&SamplerDescriptor {
-            label: Some("imgui-wgpu sampler"),
-            address_mode_u: AddressMode::ClampToEdge,
-            address_mode_v: AddressMode::ClampToEdge,
-            address_mode_w: AddressMode::ClampToEdge,
-            mag_filter: FilterMode::Linear,
-            min_filter: FilterMode::Linear,
-            mipmap_filter: FilterMode::Linear,
-            lod_min_clamp: -100.0,
-            lod_max_clamp: 100.0,
-            compare: None,
-            anisotropy_clamp: None,
-            border_color: None,
-        });
+        let sampler = device.create_sampler(&config.sampler_desc);
 
         // Create the texture bind group from the layout.
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
