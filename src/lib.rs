@@ -137,6 +137,7 @@ impl Texture {
             lod_max_clamp: 100.0,
             compare: None,
             anisotropy_clamp: None,
+            border_color: None,
         });
 
         // Create the texture bind group from the layout.
@@ -229,15 +230,15 @@ pub struct RendererConfig<'vs, 'fs> {
     pub texture_format: TextureFormat,
     pub depth_format: Option<TextureFormat>,
     pub sample_count: u32,
-    pub vertex_shader: Option<ShaderModuleSource<'vs>>,
-    pub fragment_shader: Option<ShaderModuleSource<'fs>>,
+    pub vertex_shader: Option<ShaderModuleDescriptor<'vs>>,
+    pub fragment_shader: Option<ShaderModuleDescriptor<'fs>>,
 }
 
 impl RendererConfig<'_, '_> {
     /// Create a new renderer config with custom shaders.
     pub fn with_shaders<'vs, 'fs>(
-        vertex_shader: ShaderModuleSource<'vs>,
-        fragment_shader: ShaderModuleSource<'fs>,
+        vertex_shader: ShaderModuleDescriptor<'vs>,
+        fragment_shader: ShaderModuleDescriptor<'fs>,
     ) -> RendererConfig<'vs, 'fs> {
         RendererConfig {
             texture_format: TextureFormat::Rgba8Unorm,
@@ -309,8 +310,8 @@ impl Renderer {
         } = config;
 
         // Load shaders.
-        let vs_module = device.create_shader_module(vertex_shader.unwrap());
-        let fs_module = device.create_shader_module(fragment_shader.unwrap());
+        let vs_module = device.create_shader_module(&vertex_shader.unwrap());
+        let fs_module = device.create_shader_module(&fragment_shader.unwrap());
 
         // Create the uniform matrix buffer.
         let size = 64;
@@ -327,8 +328,9 @@ impl Renderer {
             entries: &[BindGroupLayoutEntry {
                 binding: 0,
                 visibility: wgpu::ShaderStage::VERTEX,
-                ty: BindingType::UniformBuffer {
-                    dynamic: false,
+                ty: BindingType::Buffer {
+                    ty: BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
                     min_binding_size: None,
                 },
                 count: None,
@@ -341,7 +343,7 @@ impl Renderer {
             layout: &uniform_layout,
             entries: &[BindGroupEntry {
                 binding: 0,
-                resource: BindingResource::Buffer(uniform_buffer.slice(..)),
+                resource: uniform_buffer.as_entire_binding(),
             }],
         });
 
@@ -352,17 +354,20 @@ impl Renderer {
                 BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStage::FRAGMENT,
-                    ty: BindingType::SampledTexture {
+                    ty: BindingType::Texture {
                         multisampled: false,
-                        component_type: TextureComponentType::Float,
-                        dimension: TextureViewDimension::D2,
+                        sample_type: TextureSampleType::Float { filterable: true },
+                        view_dimension: TextureViewDimension::D2,
                     },
                     count: None,
                 },
                 BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStage::FRAGMENT,
-                    ty: BindingType::Sampler { comparison: false },
+                    ty: BindingType::Sampler {
+                        comparison: false,
+                        filtering: true,
+                    },
                     count: None,
                 },
             ],
@@ -376,57 +381,53 @@ impl Renderer {
         });
 
         // Create the render pipeline.
+        // Create the render pipeline.
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             label: Some("imgui-wgpu pipeline"),
             layout: Some(&pipeline_layout),
-            vertex_stage: ProgrammableStageDescriptor {
+            vertex: VertexState {
                 module: &vs_module,
                 entry_point: "main",
-            },
-            fragment_stage: Some(ProgrammableStageDescriptor {
-                module: &fs_module,
-                entry_point: "main",
-            }),
-            rasterization_state: Some(RasterizationStateDescriptor {
-                front_face: FrontFace::Cw,
-                cull_mode: CullMode::None,
-                clamp_depth: false,
-                depth_bias: 0,
-                depth_bias_slope_scale: 0.0,
-                depth_bias_clamp: 0.0,
-            }),
-            primitive_topology: PrimitiveTopology::TriangleList,
-            color_states: &[ColorStateDescriptor {
-                format: texture_format,
-                color_blend: BlendDescriptor {
-                    src_factor: BlendFactor::SrcAlpha,
-                    dst_factor: BlendFactor::OneMinusSrcAlpha,
-                    operation: BlendOperation::Add,
-                },
-                alpha_blend: BlendDescriptor {
-                    src_factor: BlendFactor::OneMinusDstAlpha,
-                    dst_factor: BlendFactor::One,
-                    operation: BlendOperation::Add,
-                },
-                write_mask: ColorWrite::ALL,
-            }],
-            depth_stencil_state: depth_format.map(|format| wgpu::DepthStencilStateDescriptor {
-                format,
-                depth_write_enabled: false,
-                depth_compare: wgpu::CompareFunction::Always,
-                stencil: wgpu::StencilStateDescriptor::default(),
-            }),
-            vertex_state: VertexStateDescriptor {
-                index_format: IndexFormat::Uint16,
-                vertex_buffers: &[VertexBufferDescriptor {
-                    stride: size_of::<DrawVert>() as BufferAddress,
+                buffers: &[VertexBufferLayout {
+                    array_stride: size_of::<DrawVert>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
                     attributes: &vertex_attr_array![0 => Float2, 1 => Float2, 2 => Uchar4Norm],
                 }],
             },
-            sample_count,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
+            primitive: PrimitiveState {
+                topology: PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: FrontFace::Cw,
+                cull_mode: CullMode::None,
+                polygon_mode: PolygonMode::Fill,
+            },
+            depth_stencil: depth_format.map(|format| wgpu::DepthStencilState {
+                format,
+                depth_write_enabled: false,
+                depth_compare: wgpu::CompareFunction::Always,
+                stencil: wgpu::StencilState::default(),
+                bias: DepthBiasState::default(),
+                clamp_depth: false,
+            }),
+            multisample: MultisampleState::default(),
+            fragment: Some(FragmentState {
+                module: &fs_module,
+                entry_point: "main",
+                targets: &[ColorTargetState {
+                    format: texture_format,
+                    color_blend: BlendState {
+                        src_factor: BlendFactor::SrcAlpha,
+                        dst_factor: BlendFactor::OneMinusSrcAlpha,
+                        operation: BlendOperation::Add,
+                    },
+                    alpha_blend: BlendState {
+                        src_factor: BlendFactor::OneMinusDstAlpha,
+                        dst_factor: BlendFactor::One,
+                        operation: BlendOperation::Add,
+                    },
+                    write_mask: ColorWrite::ALL,
+                }],
+            }),
         });
 
         let mut renderer = Self {
@@ -532,7 +533,7 @@ impl Renderer {
         let vertex_buffer = &self.vertex_buffers[draw_list_buffers_index];
 
         // Make sure the current buffers are attached to the render pass.
-        rpass.set_index_buffer(index_buffer.slice(..));
+        rpass.set_index_buffer(index_buffer.slice(..), IndexFormat::Uint16);
         rpass.set_vertex_buffer(0, vertex_buffer.slice(..));
 
         for cmd in draw_list.commands() {
