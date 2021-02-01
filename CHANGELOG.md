@@ -6,11 +6,22 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 and this project adheres to cargo's version of [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - [Unreleased](#unreleased)
+- [v0.13.0](#v0130)
 - [v0.12.0](#v0120)
 - [Diffs](#diffs)
 
 ## Unreleased
+
+## v0.13.0
+
+Released 2021-02-01
+
+#### Added
+- Add experimental simple api behind feature `simple_api_unstable`
+- Implemented `std::error::Error` for `RendererError`
+
 #### Updated
+- updated to `wgpu` 0.7
 - support `winit` 0.24 as well as 0.23
 
 ## v0.12.0
@@ -31,5 +42,6 @@ Released 2020-11-21
 
 ## Diffs
 
-- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.12.0...HEAD)
+- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.13.0...HEAD)
+- [v0.13.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.12.0...v0.13.0)
 - [v0.12.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.11.0...v0.12.0)

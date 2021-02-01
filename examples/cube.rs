@@ -154,8 +154,9 @@ impl Example {
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStage::VERTEX,
-                    ty: wgpu::BindingType::UniformBuffer {
-                        dynamic: false,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
                         min_binding_size: wgpu::BufferSize::new(64),
                     },
                     count: None,
@@ -163,17 +164,20 @@ impl Example {
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::SampledTexture {
+                    ty: wgpu::BindingType::Texture {
                         multisampled: false,
-                        component_type: wgpu::TextureComponentType::Float,
-                        dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        view_dimension: wgpu::TextureViewDimension::D2,
                     },
                     count: None,
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 2,
                     visibility: wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler { comparison: false },
+                    ty: wgpu::BindingType::Sampler {
+                        filtering: true,
+                        comparison: false,
+                    },
                     count: None,
                 },
             ],
@@ -241,8 +245,7 @@ impl Example {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: //uniform_buf.as_entire_binding(),
-                        wgpu::BindingResource::Buffer(uniform_buf.slice(..)),
+                    resource: uniform_buf.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -258,46 +261,26 @@ impl Example {
 
         // Create the render pipeline
         let vs_module =
-            device.create_shader_module(wgpu::include_spirv!("../resources/cube.vert.spv"));
+            device.create_shader_module(&wgpu::include_spirv!("../resources/cube.vert.spv"));
         let fs_module =
-            device.create_shader_module(wgpu::include_spirv!("../resources/cube.frag.spv"));
+            device.create_shader_module(&wgpu::include_spirv!("../resources/cube.frag.spv"));
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(&pipeline_layout),
-            vertex_stage: wgpu::ProgrammableStageDescriptor {
+            vertex: wgpu::VertexState {
                 module: &vs_module,
                 entry_point: "main",
-            },
-            fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
-                module: &fs_module,
-                entry_point: "main",
-            }),
-            rasterization_state: Some(wgpu::RasterizationStateDescriptor {
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: wgpu::CullMode::Back,
-                ..Default::default()
-            }),
-            primitive_topology: wgpu::PrimitiveTopology::TriangleList,
-            color_states: &[wgpu::ColorStateDescriptor {
-                format: sc_desc.format,
-                color_blend: wgpu::BlendDescriptor::REPLACE,
-                alpha_blend: wgpu::BlendDescriptor::REPLACE,
-                write_mask: wgpu::ColorWrite::ALL,
-            }],
-            depth_stencil_state: None,
-            vertex_state: wgpu::VertexStateDescriptor {
-                index_format: wgpu::IndexFormat::Uint16,
-                vertex_buffers: &[wgpu::VertexBufferDescriptor {
-                    stride: vertex_size as wgpu::BufferAddress,
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: vertex_size as wgpu::BufferAddress,
                     step_mode: wgpu::InputStepMode::Vertex,
                     attributes: &[
-                        wgpu::VertexAttributeDescriptor {
+                        wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float4,
                             offset: 0,
                             shader_location: 0,
                         },
-                        wgpu::VertexAttributeDescriptor {
+                        wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float2,
                             offset: 4 * 4,
                             shader_location: 1,
@@ -305,9 +288,23 @@ impl Example {
                     ],
                 }],
             },
-            sample_count: 1,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
+            primitive: wgpu::PrimitiveState {
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: wgpu::CullMode::Back,
+                ..Default::default()
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &fs_module,
+                entry_point: "main",
+                targets: &[wgpu::ColorTargetState {
+                    format: sc_desc.format,
+                    color_blend: wgpu::BlendState::REPLACE,
+                    alpha_blend: wgpu::BlendState::REPLACE,
+                    write_mask: wgpu::ColorWrite::ALL,
+                }],
+            }),
         });
 
         // Done
@@ -337,6 +334,7 @@ impl Example {
             device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: None,
                 color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
                     attachment: &view,
                     resolve_target: None,
@@ -355,7 +353,7 @@ impl Example {
             rpass.push_debug_group("Prepare data for draw.");
             rpass.set_pipeline(&self.pipeline);
             rpass.set_bind_group(0, &self.bind_group, &[]);
-            rpass.set_index_buffer(self.index_buf.slice(..));
+            rpass.set_index_buffer(self.index_buf.slice(..), wgpu::IndexFormat::Uint16);
             rpass.set_vertex_buffer(0, self.vertex_buf.slice(..));
             rpass.pop_debug_group();
             rpass.insert_debug_marker("Draw!");
@@ -400,9 +398,9 @@ fn main() {
 
     let (device, queue) = block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
+            label: None,
             features: wgpu::Features::empty(),
             limits: wgpu::Limits::default(),
-            shader_validation: false,
         },
         None,
     ))
@@ -410,7 +408,7 @@ fn main() {
 
     // Set up swap chain
     let sc_desc = wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
+        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
         height: size.height as u32,
@@ -474,7 +472,7 @@ fn main() {
             height: example_size[1] as u32,
             ..Default::default()
         },
-        usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT | wgpu::TextureUsage::SAMPLED,
+        usage: wgpu::TextureUsage::RENDER_ATTACHMENT | wgpu::TextureUsage::SAMPLED,
         ..Default::default()
     };
 
@@ -496,7 +494,7 @@ fn main() {
                 let size = window.inner_size();
 
                 let sc_desc = wgpu::SwapChainDescriptor {
-                    usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
+                    usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,
                     height: size.height as u32,
@@ -568,7 +566,7 @@ fn main() {
                                 height: (example_size[1] * scale[1]) as u32,
                                 ..Default::default()
                             },
-                            usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT
+                            usage: wgpu::TextureUsage::RENDER_ATTACHMENT
                                 | wgpu::TextureUsage::SAMPLED,
                             ..Default::default()
                         };
@@ -596,6 +594,7 @@ fn main() {
                 }
 
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: None,
                     color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
                         attachment: &frame.output.view,
                         resolve_target: None,
