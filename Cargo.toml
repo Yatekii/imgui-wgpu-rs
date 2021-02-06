@@ -27,13 +27,13 @@ default = []
 
 [dependencies]
 bytemuck = "1"
-imgui = "0.6"
+imgui = "0.7"
 log = "0.4"
 smallvec = "1"
 wgpu = "0.7"
 
 # deps for simple_api_unstable
-imgui-winit-support = { version = "0.6", optional = true }
+imgui-winit-support = { version = "0.7", optional = true }
 pollster = { version = "0.2.0", optional = true } # for block_on executor
 winit = { version = ">= 0.23, < 0.25", optional = true }
 
@@ -42,7 +42,7 @@ bytemuck = { version = "1.4", features = ["derive"] }
 cgmath = "0.17"
 futures = "0.3"
 image = "0.23"
-imgui-winit-support = "0.6"
+imgui-winit-support = "0.7"
 raw-window-handle = "0.3"
 wgpu-subscriber = "0.1"
 winit = "0.24"
