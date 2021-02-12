@@ -1,6 +1,6 @@
 [package]
 name = "imgui-wgpu"
-version = "0.13.1"
+version = "0.14.0"
 authors = ["Noah Hüsser <yatekii@yatekii.ch>", "Connor Fitzgerald <connorwadefitzgerald@gmail.com>", "Steven Wittens <steven@acko.net>"]
 edition = "2018"
 description = "A wgpu render backend for imgui-rs."
@@ -21,19 +21,18 @@ exclude = [
 
 [features]
 # used in src/simple_api.rs
-simple_api_unstable = [ "winit", "pollster", "imgui-winit-support" ]
-
 default = []
+simple_api_unstable = [ "winit", "pollster", "imgui-winit-support" ]
 
 [dependencies]
 bytemuck = "1"
-imgui = "0.6"
+imgui = "0.7"
 log = "0.4"
 smallvec = "1"
 wgpu = "0.7"
 
 # deps for simple_api_unstable
-imgui-winit-support = { version = "0.6", optional = true }
+imgui-winit-support = { version = "0.7", optional = true }
 pollster = { version = "0.2.0", optional = true } # for block_on executor
 winit = { version = ">= 0.23, < 0.25", optional = true }
 
@@ -42,13 +41,10 @@ bytemuck = { version = "1.4", features = ["derive"] }
 cgmath = "0.17"
 futures = "0.3"
 image = "0.23"
-imgui-winit-support = "0.6"
+imgui-winit-support = "0.7"
 raw-window-handle = "0.3"
 wgpu-subscriber = "0.1"
 winit = "0.24"
 
 [package.metadata.docs.rs]
 all-features = true
-
-# [patch.crates-io]
-# wgpu = { version = "0.4", git = "https://github.com/gfx-rs/wgpu-rs.git", rev = "7b15e24" }
