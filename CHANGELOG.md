@@ -6,6 +6,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 and this project adheres to cargo's version of [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - [Unreleased](#unreleased)
+- [v0.14.0](#v0140)
 - [v0.13.1](#v0131)
 - [v0.13.0](#v0130)
 - [v0.12.0](#v0120)
@@ -13,7 +14,16 @@ and this project adheres to cargo's version of [Semantic Versioning](https://sem
 
 ## Unreleased
 
+## v0.14.0
+
+Released 2021-02-12
+
+#### Updated
+- updated `imgui` to 0.7
+
 ## v0.13.1
+
+Released 2021-02-01
 
 #### Fixed
 - Readme
@@ -48,7 +58,8 @@ Released 2020-11-21
 
 ## Diffs
 
-- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.13.1...HEAD)
+- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.14.0...HEAD)
+- [v0.14.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.13.1...v0.14.0)
 - [v0.13.1](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.13.0...v0.13.1)
 - [v0.13.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.12.0...v0.13.0)
 - [v0.12.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.11.0...v0.12.0)
