@@ -425,7 +425,7 @@ impl Renderer {
                             src_factor: BlendFactor::OneMinusDstAlpha,
                             dst_factor: BlendFactor::One,
                             operation: BlendOperation::Add,
-                        }
+                        },
                     }),
                     write_mask: ColorWrite::ALL,
                 }],
