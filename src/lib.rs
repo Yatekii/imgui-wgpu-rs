@@ -398,7 +398,7 @@ impl Renderer {
                 topology: PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: FrontFace::Cw,
-                cull_mode: CullMode::None,
+                cull_mode: None,
                 polygon_mode: PolygonMode::Fill,
             },
             depth_stencil: depth_format.map(|format| wgpu::DepthStencilState {
@@ -415,16 +415,18 @@ impl Renderer {
                 entry_point: "main",
                 targets: &[ColorTargetState {
                     format: texture_format,
-                    color_blend: BlendState {
-                        src_factor: BlendFactor::SrcAlpha,
-                        dst_factor: BlendFactor::OneMinusSrcAlpha,
-                        operation: BlendOperation::Add,
-                    },
-                    alpha_blend: BlendState {
-                        src_factor: BlendFactor::OneMinusDstAlpha,
-                        dst_factor: BlendFactor::One,
-                        operation: BlendOperation::Add,
-                    },
+                    blend: Some(BlendState {
+                        color: BlendComponent {
+                            src_factor: BlendFactor::SrcAlpha,
+                            dst_factor: BlendFactor::OneMinusSrcAlpha,
+                            operation: BlendOperation::Add,
+                        },
+                        alpha: BlendComponent {
+                            src_factor: BlendFactor::OneMinusDstAlpha,
+                            dst_factor: BlendFactor::One,
+                            operation: BlendOperation::Add,
+                        }
+                    }),
                     write_mask: ColorWrite::ALL,
                 }],
             }),
