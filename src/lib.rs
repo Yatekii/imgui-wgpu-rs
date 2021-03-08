@@ -72,7 +72,7 @@ impl<'a> Default for TextureConfig<'a> {
             size: Extent3d {
                 width: 0,
                 height: 0,
-                depth: 1,
+                depth_or_array_layers: 1,
             },
             label: None,
             format: None,
@@ -189,7 +189,7 @@ impl Texture {
             Extent3d {
                 width,
                 height,
-                depth: 1,
+                depth_or_array_layers: 1,
             },
         );
     }
@@ -206,7 +206,7 @@ impl Texture {
 
     /// The depth of the texture.
     pub fn depth(&self) -> u32 {
-        self.size.depth
+        self.size.depth_or_array_layers
     }
 
     /// The size of the texture in pixels.
@@ -391,7 +391,7 @@ impl Renderer {
                 buffers: &[VertexBufferLayout {
                     array_stride: size_of::<DrawVert>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
-                    attributes: &vertex_attr_array![0 => Float2, 1 => Float2, 2 => Uchar4Norm],
+                    attributes: &vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Unorm8x4],
                 }],
             },
             primitive: PrimitiveState {
