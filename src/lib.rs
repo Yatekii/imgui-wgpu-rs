@@ -498,11 +498,15 @@ impl Renderer {
             render_data.render = true;
         }
 
+        // Only update matrices if the size or position changes
         if (render_data.last_size[0] - draw_data.display_size[0]).abs() > std::f32::EPSILON
             || (render_data.last_size[1] - draw_data.display_size[1]).abs() > std::f32::EPSILON
             || (render_data.last_pos[0] - draw_data.display_pos[0]).abs() > std::f32::EPSILON
             || (render_data.last_pos[1] - draw_data.display_pos[1]).abs() > std::f32::EPSILON
         {
+            render_data.last_size = draw_data.display_size;
+            render_data.last_pos = draw_data.display_pos;
+
             let width = draw_data.display_size[0];
             let height = draw_data.display_size[1];
 
