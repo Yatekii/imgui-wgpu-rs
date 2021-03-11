@@ -409,7 +409,11 @@ impl Renderer {
                 bias: DepthBiasState::default(),
                 clamp_depth: false,
             }),
-            multisample: MultisampleState::default(),
+            multisample: MultisampleState {
+                count: sample_count,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
             fragment: Some(FragmentState {
                 module: &fs_module,
                 entry_point: "main",
