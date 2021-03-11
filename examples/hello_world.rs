@@ -95,7 +95,7 @@ fn main() {
         ..Default::default()
     };
 
-    let mut renderer = Renderer::new(&mut imgui, &device, &queue, renderer_config);
+    let renderer = Renderer::new(&mut imgui, &device, &queue, renderer_config);
 
     let mut last_frame = Instant::now();
     let mut demo_open = true;
@@ -199,6 +199,9 @@ fn main() {
                     platform.prepare_render(&ui, &window);
                 }
 
+                let draw_data = ui.render();
+                let data = renderer.prepare(draw_data, None, &queue, &device);
+
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
                     color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
@@ -213,7 +216,7 @@ fn main() {
                 });
 
                 renderer
-                    .render(ui.render(), &queue, &device, &mut rpass)
+                    .render(draw_data, &data, &mut rpass)
                     .expect("Rendering failed");
 
                 drop(rpass);
