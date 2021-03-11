@@ -593,9 +593,6 @@ fn main() {
                     platform.prepare_render(&ui, &window);
                 }
 
-                let draw_data = ui.render();
-                let data = renderer.prepare(draw_data, None, &queue, &device);
-
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
                     color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
@@ -611,7 +608,7 @@ fn main() {
                 });
 
                 renderer
-                    .render(draw_data, &data, &mut rpass)
+                    .render(ui.render(), &queue, &device, &mut rpass)
                     .expect("Rendering failed");
 
                 drop(rpass);

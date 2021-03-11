@@ -299,6 +299,7 @@ pub struct Renderer {
     /// Textures of the font atlas and all images.
     pub textures: Textures<Texture>,
     texture_layout: BindGroupLayout,
+    render_data: Option<RenderData>,
     config: RendererConfig<'static, 'static>,
 }
 
@@ -449,6 +450,7 @@ impl Renderer {
             uniform_bind_group,
             textures: Textures::new(),
             texture_layout,
+            render_data: None,
             config: RendererConfig {
                 texture_format,
                 depth_format,
@@ -464,6 +466,9 @@ impl Renderer {
         renderer
     }
 
+    /// Prepares buffers for the current imgui frame.  This must be
+    /// called before `Renderer::split_render`, and its output must
+    /// be passed to the render call.
     pub fn prepare(
         &self,
         draw_data: &DrawData,
@@ -579,8 +584,10 @@ impl Renderer {
         render_data
     }
 
-    /// Render the current imgui frame.
-    pub fn render<'r>(
+    /// Render the current imgui frame.  `Renderer::prepare` must be
+    /// called first, and the output render data must be kept for the
+    /// lifetime of the renderpass.
+    pub fn split_render<'r>(
         &'r self,
         draw_data: &DrawData,
         render_data: &'r RenderData,
@@ -614,6 +621,19 @@ impl Renderer {
         }
 
         Ok(())
+    }
+
+    /// Render the current imgui frame.
+    pub fn render<'r>(
+        &'r mut self,
+        draw_data: &DrawData,
+        queue: &Queue,
+        device: &Device,
+        rpass: &mut RenderPass<'r>,
+    ) -> RendererResult<()> {
+        let render_data = self.render_data.take();
+        self.render_data = Some(self.prepare(draw_data, render_data, queue, device));
+        self.split_render(draw_data, self.render_data.as_ref().unwrap(), rpass)
     }
 
     /// Render a given `DrawList` from imgui onto a wgpu frame.
