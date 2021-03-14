@@ -36,10 +36,7 @@ use winit::{
 };
 
 /// use `Default::default` if you don't need anything specific.
-/// creating the Config initializes the imgui context such that plugins which rely on it can be initialized as well
 pub struct Config<State: 'static> {
-    /// imgui cotext
-    pub imgui: imgui::Context,
     /// name of the window
     pub window_title: String,
     /// can be used to resize the window
@@ -62,7 +59,6 @@ pub struct Config<State: 'static> {
 impl<State> Default for Config<State> {
     fn default() -> Self {
         Self {
-            imgui: imgui::Context::create(),
             window_title: "imgui".to_string(),
             initial_window_width: 1200.0,
             initial_window_height: 720.0,
@@ -81,6 +77,7 @@ impl<State> Default for Config<State> {
 
 /// simple function to draw imgui
 pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourState)>(
+    mut imgui: imgui::Context,
     config: Config<YourState>,
     mut state: YourState,
     render_ui: UiFunction,
@@ -128,7 +125,6 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
     let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
     // Set up dear imgui
-    let mut imgui = config.imgui;
     let mut platform = imgui_winit_support::WinitPlatform::init(&mut imgui);
     platform.attach_window(
         imgui.io_mut(),

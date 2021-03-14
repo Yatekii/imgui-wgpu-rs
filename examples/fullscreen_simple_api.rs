@@ -28,7 +28,10 @@ fn main() {
         high_dpi_factor: 2.0,
     };
 
-    imgui_wgpu::simple_api::run(config, state, |ui, state| {
+    let imgui = imgui::Context::create();
+    // setup imnodes/ implot context as needed, it can depend on the imgui context being created first
+
+    imgui_wgpu::simple_api::run(imgui, config, state, |ui, state| {
         let now = std::time::Instant::now();
 
         imgui::Window::new(im_str!("full-window example"))
