@@ -309,9 +309,16 @@ impl Renderer {
             fragment_shader,
         } = config;
 
-        // Load shaders.
-        let vs_module = device.create_shader_module(&vertex_shader.unwrap());
-        let fs_module = device.create_shader_module(&fragment_shader.unwrap());
+        // Workaround for MacOS issues with naga validation
+        let mut vertex_shader_descriptor = vertex_shader.unwrap();
+        vertex_shader_descriptor.flags = wgpu::ShaderFlags::empty();
+
+        let mut fragment_shader_descriptor = fragment_shader.unwrap();
+        fragment_shader_descriptor.flags = wgpu::ShaderFlags::empty();
+
+        // Create shader modules.
+        let vs_module = device.create_shader_module(&vertex_shader_descriptor);
+        let fs_module = device.create_shader_module(&fragment_shader_descriptor);
 
         // Create the uniform matrix buffer.
         let size = 64;
