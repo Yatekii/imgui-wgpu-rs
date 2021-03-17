@@ -29,7 +29,7 @@ bytemuck = "1"
 imgui = "0.7"
 log = "0.4"
 smallvec = "1"
-wgpu = { git = "https://github.com/gfx-rs/wgpu-rs", rev = '96ca1e41dd4ede12bcb3220712ab5c8c2fd688ad' }
+wgpu = { git = "https://github.com/gfx-rs/wgpu-rs", rev = '5c249c4375ae779c494028398e5de7c798e41735' }
 
 # deps for simple_api_unstable
 imgui-winit-support = { version = "0.7", optional = true }
