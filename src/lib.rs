@@ -395,6 +395,7 @@ impl Renderer {
                 }],
             },
             primitive: PrimitiveState {
+                conservative: false,
                 topology: PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: FrontFace::Cw,
