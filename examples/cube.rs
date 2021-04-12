@@ -194,7 +194,7 @@ impl Example {
         let texture_extent = wgpu::Extent3d {
             width: size,
             height: size,
-            depth: 1,
+            depth_or_array_layers: 1,
         };
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
@@ -207,16 +207,16 @@ impl Example {
         });
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         queue.write_texture(
-            wgpu::TextureCopyView {
+            wgpu::ImageCopyTexture {
                 texture: &texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
             },
             &texels,
-            wgpu::TextureDataLayout {
+            wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: 4 * size,
-                rows_per_image: 0,
+                bytes_per_row: Some(std::num::NonZeroU32::new(4 * size).unwrap()),
+                rows_per_image: None,
             },
             texture_extent,
         );
@@ -276,12 +276,12 @@ impl Example {
                     step_mode: wgpu::InputStepMode::Vertex,
                     attributes: &[
                         wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float4,
+                            format: wgpu::VertexFormat::Float32x4,
                             offset: 0,
                             shader_location: 0,
                         },
                         wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float2,
+                            format: wgpu::VertexFormat::Float32x2,
                             offset: 4 * 4,
                             shader_location: 1,
                         },
@@ -290,7 +290,7 @@ impl Example {
             },
             primitive: wgpu::PrimitiveState {
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: wgpu::CullMode::Back,
+                cull_mode: Some(wgpu::Face::Back),
                 ..Default::default()
             },
             depth_stencil: None,
@@ -300,8 +300,10 @@ impl Example {
                 entry_point: "main",
                 targets: &[wgpu::ColorTargetState {
                     format: sc_desc.format,
-                    color_blend: wgpu::BlendState::REPLACE,
-                    alpha_blend: wgpu::BlendState::REPLACE,
+                    blend: Some(wgpu::BlendState {
+                        color: wgpu::BlendComponent::REPLACE,
+                        alpha: wgpu::BlendComponent::REPLACE,
+                    }),
                     write_mask: wgpu::ColorWrite::ALL,
                 }],
             }),
@@ -335,8 +337,8 @@ impl Example {
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &view,
+                color_attachments: &[wgpu::RenderPassColorAttachment {
+                    view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -595,8 +597,8 @@ fn main() {
 
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
-                    color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                        attachment: &frame.output.view,
+                    color_attachments: &[wgpu::RenderPassColorAttachment {
+                        view: &frame.output.view,
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Load, // Do not clear
