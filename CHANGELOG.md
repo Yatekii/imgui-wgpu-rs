@@ -6,6 +6,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 and this project adheres to cargo's version of [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - [Unreleased](#unreleased)
+- [v0.15.0](#v0150)
 - [v0.14.0](#v0140)
 - [v0.13.1](#v0131)
 - [v0.13.0](#v0130)
@@ -13,6 +14,13 @@ and this project adheres to cargo's version of [Semantic Versioning](https://sem
 - [Diffs](#diffs)
 
 ## Unreleased
+
+## v0.15.0
+
+Released 2021-05-08
+
+#### Updated
+- updated `wgpu` to 0.8
 
 ## v0.14.0
 
