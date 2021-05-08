@@ -599,20 +599,7 @@ impl Renderer {
 
     /// Upload the index buffer to the GPU.
     fn upload_index_buffer(&self, device: &Device, indices: &[DrawIdx]) -> Buffer {
-        let mut data = bytemuck::cast_slice(&indices);
-
-        // HACK: buffer creation must have length a multiple of 4, so zero pad it.
-        //       fixed in wgpu master so this can be removed when wgpu 0.8.1 is released.
-        //       see https://github.com/gfx-rs/wgpu-rs/pull/900
-        let v;
-        if data.len() % 4 != 0 {
-            v = data
-                .iter()
-                .copied()
-                .chain(std::iter::repeat(0).take(4 - data.len() % 4))
-                .collect::<Vec<_>>();
-            data = &v;
-        }
+        let data = bytemuck::cast_slice(&indices);
 
         device.create_buffer_init(&BufferInitDescriptor {
             label: Some("imgui-wgpu index buffer"),

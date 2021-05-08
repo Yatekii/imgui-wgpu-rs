@@ -29,7 +29,7 @@ bytemuck = "1"
 imgui = "0.7"
 log = "0.4"
 smallvec = "1"
-wgpu = "0.8"
+wgpu = "0.8.1"
 
 # deps for simple_api_unstable
 imgui-winit-support = { version = "0.7", optional = true }
