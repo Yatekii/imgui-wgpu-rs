@@ -1,6 +1,6 @@
 [package]
 name = "imgui-wgpu"
-version = "0.14.0"
+version = "0.15.1"
 authors = ["Noah Hüsser <yatekii@yatekii.ch>", "Connor Fitzgerald <connorwadefitzgerald@gmail.com>", "Steven Wittens <steven@acko.net>"]
 edition = "2018"
 description = "A wgpu render backend for imgui-rs."
@@ -29,7 +29,7 @@ bytemuck = "1"
 imgui = "0.7"
 log = "0.4"
 smallvec = "1"
-wgpu = "0.7"
+wgpu = "0.8.1"
 
 # deps for simple_api_unstable
 imgui-winit-support = { version = "0.7", optional = true }
@@ -38,7 +38,7 @@ winit = { version = ">= 0.23, < 0.25", optional = true }
 
 [dev-dependencies]
 bytemuck = { version = "1.4", features = ["derive"] }
-cgmath = "0.17"
+cgmath = "0.18"
 futures = "0.3"
 image = "0.23"
 imgui-winit-support = "0.7"
