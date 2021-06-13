@@ -548,7 +548,15 @@ impl Renderer {
                     (cmd_params.clip_rect[2] - clip_off[0]) * clip_scale[0],
                     (cmd_params.clip_rect[3] - clip_off[1]) * clip_scale[1],
                 ];
-
+                let scissors = (
+                    clip_rect[0].max(0.0).floor() as u32,
+                    clip_rect[1].max(0.0).floor() as u32,
+                    (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
+                    (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
+                );
+                if scissors.2 == 0 || scissors.3 == 0 {
+                    continue;
+                }
                 // Set the current texture bind group on the renderpass.
                 let texture_id = cmd_params.texture_id;
                 let tex = self
@@ -558,12 +566,6 @@ impl Renderer {
                 rpass.set_bind_group(1, &tex.bind_group, &[]);
 
                 // Set scissors on the renderpass.
-                let scissors = (
-                    clip_rect[0].max(0.0).floor() as u32,
-                    clip_rect[1].max(0.0).floor() as u32,
-                    (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
-                    (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
-                );
                 rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
 
                 // Draw the current batch of vertices with the renderpass.
