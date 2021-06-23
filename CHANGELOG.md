@@ -16,6 +16,9 @@ and this project adheres to cargo's version of [Semantic Versioning](https://sem
 
 ## Unreleased
 
+#### Updated
+- updated `wgpu` to 0.9
+
 ## v0.15.1
 
 Released 2021-05-08
