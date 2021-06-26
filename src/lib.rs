@@ -282,6 +282,17 @@ impl RendererConfig<'_, '_> {
     }
 }
 
+pub struct RenderData {
+    last_size: [f32; 2],
+    last_pos: [f32; 2],
+    vertex_buffer: Option<Buffer>,
+    vertex_buffer_size: usize,
+    index_buffer: Option<Buffer>,
+    index_buffer_size: usize,
+    draw_list_offsets: SmallVec<[(i32, u32); 4]>,
+    render: bool,
+}
+
 pub struct Renderer {
     pipeline: RenderPipeline,
     uniform_buffer: Buffer,
@@ -289,8 +300,7 @@ pub struct Renderer {
     /// Textures of the font atlas and all images.
     pub textures: Textures<Texture>,
     texture_layout: BindGroupLayout,
-    index_buffers: SmallVec<[Buffer; 4]>,
-    vertex_buffers: SmallVec<[Buffer; 4]>,
+    render_data: Option<RenderData>,
     config: RendererConfig<'static, 'static>,
 }
 
@@ -411,7 +421,11 @@ impl Renderer {
                 stencil: wgpu::StencilState::default(),
                 bias: DepthBiasState::default(),
             }),
-            multisample: MultisampleState::default(),
+            multisample: MultisampleState {
+                count: sample_count,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
             fragment: Some(FragmentState {
                 module: &fs_module,
                 entry_point: "main",
@@ -440,8 +454,7 @@ impl Renderer {
             uniform_bind_group,
             textures: Textures::new(),
             texture_layout,
-            vertex_buffers: SmallVec::new(),
-            index_buffers: SmallVec::new(),
+            render_data: None,
             config: RendererConfig {
                 texture_format,
                 depth_format,
@@ -457,6 +470,167 @@ impl Renderer {
         renderer
     }
 
+    /// Prepares buffers for the current imgui frame.  This must be
+    /// called before `Renderer::split_render`, and its output must
+    /// be passed to the render call.
+    pub fn prepare(
+        &self,
+        draw_data: &DrawData,
+        render_data: Option<RenderData>,
+        queue: &Queue,
+        device: &Device,
+    ) -> RenderData {
+        let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
+        let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
+
+        let mut render_data = render_data.unwrap_or_else(|| RenderData {
+            last_size: [0.0, 0.0],
+            last_pos: [0.0, 0.0],
+            vertex_buffer: None,
+            vertex_buffer_size: 0,
+            index_buffer: None,
+            index_buffer_size: 0,
+            draw_list_offsets: SmallVec::<[_; 4]>::new(),
+            render: false,
+        });
+
+        // If the render area is <= 0, exit here and now.
+        if fb_width <= 0.0 || fb_height <= 0.0 {
+            render_data.render = false;
+            return render_data;
+        } else {
+            render_data.render = true;
+        }
+
+        // Only update matrices if the size or position changes
+        if (render_data.last_size[0] - draw_data.display_size[0]).abs() > std::f32::EPSILON
+            || (render_data.last_size[1] - draw_data.display_size[1]).abs() > std::f32::EPSILON
+            || (render_data.last_pos[0] - draw_data.display_pos[0]).abs() > std::f32::EPSILON
+            || (render_data.last_pos[1] - draw_data.display_pos[1]).abs() > std::f32::EPSILON
+        {
+            render_data.last_size = draw_data.display_size;
+            render_data.last_pos = draw_data.display_pos;
+
+            let width = draw_data.display_size[0];
+            let height = draw_data.display_size[1];
+
+            let offset_x = draw_data.display_pos[0] / width;
+            let offset_y = draw_data.display_pos[1] / height;
+
+            // Create and update the transform matrix for the current frame.
+            // This is required to adapt to vulkan coordinates.
+            let matrix = [
+                [2.0 / width, 0.0, 0.0, 0.0],
+                [0.0, 2.0 / -height as f32, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [-1.0 - offset_x * 2.0, 1.0 + offset_y * 2.0, 0.0, 1.0],
+            ];
+            self.update_uniform_buffer(queue, &matrix);
+        }
+
+        render_data.draw_list_offsets.clear();
+
+        let mut vertex_count = 0;
+        let mut index_count = 0;
+        for draw_list in draw_data.draw_lists() {
+            render_data
+                .draw_list_offsets
+                .push((vertex_count as i32, index_count as u32));
+            vertex_count += draw_list.vtx_buffer().len();
+            index_count += draw_list.idx_buffer().len();
+        }
+
+        let mut vertices = Vec::with_capacity(vertex_count * std::mem::size_of::<DrawVertPod>());
+        let mut indices = Vec::with_capacity(index_count * std::mem::size_of::<DrawIdx>());
+
+        for draw_list in draw_data.draw_lists() {
+            // Safety: DrawVertPod is #[repr(transparent)] over DrawVert and DrawVert _should_ be Pod.
+            let vertices_pod: &[DrawVertPod] = unsafe { draw_list.transmute_vtx_buffer() };
+            vertices.extend_from_slice(bytemuck::cast_slice(&vertices_pod));
+            indices.extend_from_slice(bytemuck::cast_slice(&draw_list.idx_buffer()));
+        }
+
+        // Copies in wgpu must be padded to 4 byte alignment
+        indices.resize(
+            indices.len() + COPY_BUFFER_ALIGNMENT as usize
+                - indices.len() % COPY_BUFFER_ALIGNMENT as usize,
+            0,
+        );
+
+        // If the buffer is not created or is too small for the new indices, create a new buffer
+        if render_data.index_buffer.is_none() || render_data.index_buffer_size < indices.len() {
+            let buffer = device.create_buffer_init(&BufferInitDescriptor {
+                label: Some("imgui-wgpu index buffer"),
+                contents: &indices,
+                usage: BufferUsage::INDEX | BufferUsage::COPY_DST,
+            });
+            render_data.index_buffer = Some(buffer);
+            render_data.index_buffer_size = indices.len();
+        } else if let Some(buffer) = render_data.index_buffer.as_ref() {
+            // The buffer is large enough for the new indices, so reuse it
+            queue.write_buffer(buffer, 0, &indices);
+        } else {
+            unreachable!()
+        }
+
+        // If the buffer is not created or is too small for the new vertices, create a new buffer
+        if render_data.vertex_buffer.is_none() || render_data.vertex_buffer_size < vertices.len() {
+            let buffer = device.create_buffer_init(&BufferInitDescriptor {
+                label: Some("imgui-wgpu vertex buffer"),
+                contents: &vertices,
+                usage: BufferUsage::VERTEX | BufferUsage::COPY_DST,
+            });
+            render_data.vertex_buffer = Some(buffer);
+            render_data.vertex_buffer_size = vertices.len();
+        } else if let Some(buffer) = render_data.vertex_buffer.as_ref() {
+            // The buffer is large enough for the new vertices, so reuse it
+            queue.write_buffer(buffer, 0, &vertices);
+        } else {
+            unreachable!()
+        }
+
+        render_data
+    }
+
+    /// Render the current imgui frame.  `Renderer::prepare` must be
+    /// called first, and the output render data must be kept for the
+    /// lifetime of the renderpass.
+    pub fn split_render<'r>(
+        &'r self,
+        draw_data: &DrawData,
+        render_data: &'r RenderData,
+        rpass: &mut RenderPass<'r>,
+    ) -> RendererResult<()> {
+        if !render_data.render {
+            return Ok(());
+        }
+
+        rpass.set_pipeline(&self.pipeline);
+        rpass.set_bind_group(0, &self.uniform_bind_group, &[]);
+        rpass.set_vertex_buffer(0, render_data.vertex_buffer.as_ref().unwrap().slice(..));
+        rpass.set_index_buffer(
+            render_data.index_buffer.as_ref().unwrap().slice(..),
+            IndexFormat::Uint16,
+        );
+
+        // Execute all the imgui render work.
+        for (draw_list, (vertex_base, index_base)) in draw_data
+            .draw_lists()
+            .zip(render_data.draw_list_offsets.iter())
+        {
+            self.render_draw_list(
+                rpass,
+                &draw_list,
+                draw_data.display_pos,
+                draw_data.framebuffer_scale,
+                *index_base,
+                *vertex_base,
+            )?;
+        }
+
+        Ok(())
+    }
+
     /// Render the current imgui frame.
     pub fn render<'r>(
         &'r mut self,
@@ -465,61 +639,9 @@ impl Renderer {
         device: &Device,
         rpass: &mut RenderPass<'r>,
     ) -> RendererResult<()> {
-        let fb_width = draw_data.display_size[0] * draw_data.framebuffer_scale[0];
-        let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
-
-        // If the render area is <= 0, exit here and now.
-        if !(fb_width > 0.0 && fb_height > 0.0) {
-            return Ok(());
-        }
-
-        let width = draw_data.display_size[0];
-        let height = draw_data.display_size[1];
-
-        let offset_x = draw_data.display_pos[0] / width;
-        let offset_y = draw_data.display_pos[1] / height;
-
-        // Create and update the transform matrix for the current frame.
-        // This is required to adapt to vulkan coordinates.
-        // let matrix = [
-        //     [2.0 / width, 0.0, 0.0, 0.0],
-        //     [0.0, 2.0 / height as f32, 0.0, 0.0],
-        //     [0.0, 0.0, -1.0, 0.0],
-        //     [-1.0, -1.0, 0.0, 1.0],
-        // ];
-        let matrix = [
-            [2.0 / width, 0.0, 0.0, 0.0],
-            [0.0, 2.0 / -height as f32, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [-1.0 - offset_x * 2.0, 1.0 + offset_y * 2.0, 0.0, 1.0],
-        ];
-        self.update_uniform_buffer(queue, &matrix);
-
-        rpass.set_pipeline(&self.pipeline);
-        rpass.set_bind_group(0, &self.uniform_bind_group, &[]);
-
-        self.vertex_buffers.clear();
-        self.index_buffers.clear();
-
-        for draw_list in draw_data.draw_lists() {
-            self.vertex_buffers
-                .push(self.upload_vertex_buffer(device, draw_list.vtx_buffer()));
-            self.index_buffers
-                .push(self.upload_index_buffer(device, draw_list.idx_buffer()));
-        }
-
-        // Execute all the imgui render work.
-        for (draw_list_buffers_index, draw_list) in draw_data.draw_lists().enumerate() {
-            self.render_draw_list(
-                rpass,
-                &draw_list,
-                draw_data.display_pos,
-                draw_data.framebuffer_scale,
-                draw_list_buffers_index,
-            )?;
-        }
-
-        Ok(())
+        let render_data = self.render_data.take();
+        self.render_data = Some(self.prepare(draw_data, render_data, queue, device));
+        self.split_render(draw_data, self.render_data.as_ref().unwrap(), rpass)
     }
 
     /// Render a given `DrawList` from imgui onto a wgpu frame.
@@ -529,16 +651,10 @@ impl Renderer {
         draw_list: &DrawList,
         clip_off: [f32; 2],
         clip_scale: [f32; 2],
-        draw_list_buffers_index: usize,
+        index_base: u32,
+        vertex_base: i32,
     ) -> RendererResult<()> {
-        let mut start = 0;
-
-        let index_buffer = &self.index_buffers[draw_list_buffers_index];
-        let vertex_buffer = &self.vertex_buffers[draw_list_buffers_index];
-
-        // Make sure the current buffers are attached to the render pass.
-        rpass.set_index_buffer(index_buffer.slice(..), IndexFormat::Uint16);
-        rpass.set_vertex_buffer(0, vertex_buffer.slice(..));
+        let mut start = index_base;
 
         for cmd in draw_list.commands() {
             if let Elements { count, cmd_params } = cmd {
@@ -568,7 +684,7 @@ impl Renderer {
 
                 // Draw the current batch of vertices with the renderpass.
                 let end = start + count as u32;
-                rpass.draw_indexed(start..end, 0, 0..1);
+                rpass.draw_indexed(start..end, vertex_base, 0..1);
                 start = end;
             }
         }
@@ -576,36 +692,9 @@ impl Renderer {
     }
 
     /// Updates the current uniform buffer containing the transform matrix.
-    fn update_uniform_buffer(&mut self, queue: &Queue, matrix: &[[f32; 4]; 4]) {
+    fn update_uniform_buffer(&self, queue: &Queue, matrix: &[[f32; 4]; 4]) {
         let data = bytemuck::bytes_of(matrix);
-
         queue.write_buffer(&self.uniform_buffer, 0, data);
-    }
-
-    /// Upload the vertex buffer to the GPU.
-    fn upload_vertex_buffer(&self, device: &Device, vertices: &[DrawVert]) -> Buffer {
-        // Safety: DrawVertPod is #[repr(transparent)] over DrawVert and DrawVert _should_ be Pod.
-        let vertices = unsafe {
-            std::slice::from_raw_parts(vertices.as_ptr() as *mut DrawVertPod, vertices.len())
-        };
-
-        let data = bytemuck::cast_slice(&vertices);
-        device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("imgui-wgpu vertex buffer"),
-            contents: data,
-            usage: BufferUsage::VERTEX,
-        })
-    }
-
-    /// Upload the index buffer to the GPU.
-    fn upload_index_buffer(&self, device: &Device, indices: &[DrawIdx]) -> Buffer {
-        let data = bytemuck::cast_slice(&indices);
-
-        device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("imgui-wgpu index buffer"),
-            contents: data,
-            usage: BufferUsage::INDEX,
-        })
     }
 
     /// Updates the texture on the GPU corresponding to the current imgui font atlas.
