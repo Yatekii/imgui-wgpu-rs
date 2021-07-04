@@ -411,7 +411,10 @@ impl Renderer {
                 stencil: wgpu::StencilState::default(),
                 bias: DepthBiasState::default(),
             }),
-            multisample: MultisampleState::default(),
+            multisample: MultisampleState {
+                count: sample_count,
+                .. Default::default()
+            },
             fragment: Some(FragmentState {
                 module: &fs_module,
                 entry_point: "main",
