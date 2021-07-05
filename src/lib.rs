@@ -413,7 +413,7 @@ impl Renderer {
             }),
             multisample: MultisampleState {
                 count: sample_count,
-                .. Default::default()
+                ..Default::default()
             },
             fragment: Some(FragmentState {
                 module: &fs_module,
