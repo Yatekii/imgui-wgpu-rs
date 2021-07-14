@@ -14,7 +14,7 @@ Optionally, you can provide your own Struct to have a place to store mutable sta
 
 ```no_run
 fn main() {
-    imgui_wgpu::simple_api::run(Default::default(), (), |ui, _| {
+    imgui_wgpu::simple_api::run(imgui::Context::create(), Default::default(), (), |ui, _| {
         imgui::Window::new(imgui::im_str!("hello world")).build(&ui, || {
             ui.text(imgui::im_str!("Hello world!"));
         });
@@ -77,6 +77,7 @@ impl<State> Default for Config<State> {
 
 /// simple function to draw imgui
 pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourState)>(
+    mut imgui: imgui::Context,
     config: Config<YourState>,
     mut state: YourState,
     render_ui: UiFunction,
@@ -124,7 +125,6 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
     let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
     // Set up dear imgui
-    let mut imgui = imgui::Context::create();
     let mut platform = imgui_winit_support::WinitPlatform::init(&mut imgui);
     platform.attach_window(
         imgui.io_mut(),

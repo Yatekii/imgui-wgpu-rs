@@ -2,7 +2,7 @@
 // cargo run --example basic_simple_api --features=simple_api_unstable
 
 fn main() {
-    imgui_wgpu::simple_api::run(Default::default(), (), |ui, _| {
+    imgui_wgpu::simple_api::run(imgui::Context::create(), Default::default(), (), |ui, _| {
         imgui::Window::new(imgui::im_str!("hello world")).build(&ui, || {
             ui.text(imgui::im_str!("Hello world!"));
         });
