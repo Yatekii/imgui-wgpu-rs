@@ -124,10 +124,6 @@ jobs:
           profile: minimal
           default: true
       
-      - name: install cargo-readme
-        run: |
-          cargo install cargo-readme
-      
       - name: install cargo-release
         run: |
           cargo install cargo-release
