@@ -16,6 +16,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 #### Table of Contents
 
 - [Unreleased](#unreleased)
+- [v0.16.0](#v0160)
 - [v0.15.1](#v0151)
 - [v0.15.0](#v0150)
 - [v0.14.0](#v0140)
@@ -25,6 +26,10 @@ Per Keep a Changelog there are 6 main categories of changes:
 - [Diffs](#diffs)
 
 ## Unreleased
+
+## v0.16.0
+
+Released 2021-07-14
 
 #### Added
 - Internal: Vastly improved CI and release process.
@@ -102,7 +107,8 @@ Released 2020-11-21
 
 ## Diffs
 
-- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.15.1...HEAD)
+- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.16.0...HEAD)
+- [v0.16.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.15.1...v0.16.0)
 - [v0.15.1](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.15.0...v0.15.1)
 - [v0.15.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.14.0...v0.15.0)
 - [v0.14.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.13.1...v0.14.0)
