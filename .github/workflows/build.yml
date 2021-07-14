@@ -64,12 +64,6 @@ jobs:
           command: build
           args: --target ${{ matrix.target }}
           
-      - name: test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-        if: ${{ matrix.name != 'wasm' }}
-          
       - name: doc
         uses: actions-rs/cargo@v1
         env:

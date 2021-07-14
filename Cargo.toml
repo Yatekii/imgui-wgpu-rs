@@ -18,6 +18,13 @@ exclude = [
 	"examples",
 	"resources",
 ]
+[[example]]
+name = "basic_simple_api"
+required-features = ["simple_api_unstable"]
+
+[[example]]
+name = "fullscreen_simple_api"
+required-features = ["simple_api_unstable"]
 
 [[package.metadata.release.pre-release-replacements]]
 file = "CHANGELOG.md"
@@ -62,9 +69,9 @@ winit = { version = ">= 0.23, < 0.25", optional = true }
 [dev-dependencies]
 bytemuck = { version = "1.4", features = ["derive"] }
 cgmath = "0.18"
-futures = "0.3"
-image = "0.23"
+image = { version = "0.23", default-features = false, features = ["jpeg"] }
 imgui-winit-support = "0.7"
+pollster = "0.2"
 raw-window-handle = "0.3"
 wgpu-subscriber = "0.1"
 winit = "0.24"

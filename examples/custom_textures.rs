@@ -1,7 +1,7 @@
-use futures::executor::block_on;
 use image::ImageFormat;
 use imgui::*;
 use imgui_wgpu::{Renderer, RendererConfig, Texture, TextureConfig};
+use pollster::block_on;
 use std::time::Instant;
 use wgpu::Extent3d;
 use winit::{

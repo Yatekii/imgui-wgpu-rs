@@ -1,8 +1,8 @@
 extern crate imgui_winit_support;
 
-use futures::executor::block_on;
 use imgui::*;
 use imgui_wgpu::{Renderer, RendererConfig};
+use pollster::block_on;
 
 use std::time::Instant;
 use winit::{

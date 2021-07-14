@@ -4,7 +4,6 @@ allow-osi-fsf-free = "either"
 allow = [
     "Apache-2.0",
     "BSL-1.0",
-    "LGPL-3.0",
     "MIT",
     "MPL-2.0",
     "Unlicense",
@@ -13,12 +12,22 @@ allow = [
 [bans]
 multiple-versions = "deny"
 skip = [
+    { name = "cfg-if", version = "0.1.10" },
+    { name = "core-foundation", version = "0.7.0" },
+    { name = "core-foundation-sys", version = "0.7.0" },
+    { name = "core-graphics", version = "0.19.2" },
+    { name = "dlib", version = "0.4.2" },
+    { name = "libloading", version = "0.6.7" },
+    { name = "nix", version = "0.18.0" },
+    { name = "redox_syscall", version = "0.1.57" },
+    { name = "winapi", version = "0.2.8" },
 ]
 
 [advisories]
 vulnerability = "deny"
 unmaintained = "deny"
 ignore = [
+    "RUSTSEC-2020-0016"
 ]
 
 [sources]
