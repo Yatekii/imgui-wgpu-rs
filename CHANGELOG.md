@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to cargo's version of [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+Per Keep a Changelog there are 6 main categories of changes:
+- Added
+- Changed
+- Deprecated
+- Removed
+- Fixed
+- Security
+
+#### Table of Contents
+
 - [Unreleased](#unreleased)
 - [v0.15.1](#v0151)
 - [v0.15.0](#v0150)
@@ -15,6 +25,18 @@ and this project adheres to cargo's version of [Semantic Versioning](https://sem
 - [Diffs](#diffs)
 
 ## Unreleased
+
+#### Added
+- Internal: Vastly improved CI and release process.
+- Internal: PR and Issue Templates
+
+#### Changed
+- Examples: Use `env_logger` instead of `wgpu-subscriber`
+- Examples: Use `pollster` as block_on provider instead of `futures`
+
+#### Fixed
+- Rendering to multi-sampled images no longer errors.
+- Examples: Simple API examples now properly depend on that feature existing.
 
 #### Updated
 - updated `wgpu` to 0.9

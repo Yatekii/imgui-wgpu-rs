@@ -1,8 +1,8 @@
 extern crate imgui_winit_support;
 
-use futures::executor::block_on;
 use imgui::*;
 use imgui_wgpu::{Renderer, RendererConfig};
+use pollster::block_on;
 
 use std::time::Instant;
 use winit::{
@@ -13,7 +13,7 @@ use winit::{
 };
 
 fn main() {
-    wgpu_subscriber::initialize_default_subscriber(None);
+    env_logger::init();
 
     // Set up window and GPU
     let event_loop = EventLoop::new();

@@ -1,7 +1,7 @@
-use futures::executor::block_on;
 use image::ImageFormat;
 use imgui::*;
 use imgui_wgpu::{Renderer, RendererConfig, Texture, TextureConfig};
+use pollster::block_on;
 use std::time::Instant;
 use wgpu::Extent3d;
 use winit::{
@@ -12,7 +12,7 @@ use winit::{
 };
 
 fn main() {
-    wgpu_subscriber::initialize_default_subscriber(None);
+    env_logger::init();
 
     // Set up window and GPU
     let event_loop = EventLoop::new();

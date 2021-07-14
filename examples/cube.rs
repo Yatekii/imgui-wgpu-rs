@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
-use futures::executor::block_on;
 use imgui::*;
 use imgui_wgpu::{Renderer, RendererConfig, Texture, TextureConfig};
+use pollster::block_on;
 use std::num::NonZeroU32;
 use std::time::Instant;
 use wgpu::{util::DeviceExt, BlendState, Extent3d};
@@ -114,7 +114,7 @@ struct Example {
 impl Example {
     fn generate_matrix(aspect_ratio: f32, theta: f32) -> cgmath::Matrix4<f32> {
         let mx_projection = cgmath::perspective(cgmath::Deg(45f32), aspect_ratio, 1.0, 10.0);
-        let mx_view = cgmath::Matrix4::look_at(
+        let mx_view = cgmath::Matrix4::look_at_rh(
             cgmath::Point3::new(6.0 * theta.cos(), 6.0 * theta.sin(), 3.0),
             cgmath::Point3::new(0f32, 0.0, 0.0),
             cgmath::Vector3::unit_z(),
@@ -368,7 +368,7 @@ impl Example {
 }
 
 fn main() {
-    wgpu_subscriber::initialize_default_subscriber(None);
+    env_logger::init();
 
     // Set up window and GPU
     let event_loop = EventLoop::new();
