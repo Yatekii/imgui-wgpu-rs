@@ -12,7 +12,7 @@ use winit::{
 };
 
 fn main() {
-    wgpu_subscriber::initialize_default_subscriber(None);
+    env_logger::init();
 
     // Set up window and GPU
     let event_loop = EventLoop::new();
