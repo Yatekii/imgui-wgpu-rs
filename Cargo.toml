@@ -15,9 +15,9 @@ license = "MIT OR Apache-2.0"
 exclude = [
 	".gitignore",
 	".github",
-	"examples",
 	"resources",
 ]
+
 [[example]]
 name = "basic_simple_api"
 required-features = ["simple_api_unstable"]
