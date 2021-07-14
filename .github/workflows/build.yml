@@ -135,7 +135,7 @@ jobs:
           git checkout master
 
           cargo login ${{ secrets.CRATES_TOKEN }}
-          cargo release --skip-publish --no-confirm $( echo '${{ github.ref }}' | sed 's?refs/tags/v??' )
+          cargo release --no-confirm $( echo '${{ github.ref }}' | sed 's?refs/tags/v??' )
       
       - name: generate release notes
         id: notes
