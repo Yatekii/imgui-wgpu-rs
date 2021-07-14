@@ -19,6 +19,29 @@ exclude = [
 	"resources",
 ]
 
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "\\[Unreleased\\]\\(#unreleased\\)"
+replace = "[Unreleased](#unreleased)\n- [v{{version}}](#v{{version}})"
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "\\[v([0-9]+)\\.([0-9]+)\\.([0-9]+)\\]\\(#v[0-9\\.]+\\)"
+replace = "[v$1.$2.$3](#v$1$2$3)"
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "## Unreleased"
+replace = "## Unreleased\n\n## v{{version}}\n\nReleased {{date}}"
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "\\[Unreleased\\]\\(https://github.com/Yatekii/imgui-wgpu-rs/compare/v([a-z0-9.-]+)\\.\\.\\.HEAD\\)"
+replace = "[Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v{{version}}...HEAD)\n- [v{{version}}](https://github.com/Yatekii/imgui-wgpu-rs/compare/v$1...v{{version}})"
+min = 0  # allow first increment
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "<!-- Begin Diffs -->"
+replace = "- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v{{version}}...HEAD)"
+min = 0  # allow non-first increment
+
 [features]
 # used in src/simple_api.rs
 default = []
