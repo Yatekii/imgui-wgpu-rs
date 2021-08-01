@@ -577,10 +577,17 @@ impl Renderer {
                         (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
                     );
 
-                    rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
+                    // XXX: Work-around for wgpu issue [1] by only issuing draw
+                    // calls if the scissor rect is valid (by wgpu's flawed
+                    // logic). Regardless, a zero-width or zero-height scissor
+                    // is essentially a no-op render anyway, so just skip it.
+                    // [1]: https://github.com/gfx-rs/wgpu/issues/1750
+                    if scissors.2 > 0 && scissors.3 > 0 {
+                        rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
 
-                    // Draw the current batch of vertices with the renderpass.
-                    rpass.draw_indexed(start..end, 0, 0..1);
+                        // Draw the current batch of vertices with the renderpass.
+                        rpass.draw_indexed(start..end, 0, 0..1);
+                    }
                 }
 
                 // Increment the index regardless of whether or not this batch
