@@ -27,6 +27,9 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+#### Changed
+- Internal: translate shaders from SPIR-V to WGSL
+
 #### Fixed
 - Internal: fix all warnings from static analysis (clippy).
 

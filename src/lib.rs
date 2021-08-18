@@ -226,32 +226,43 @@ impl Texture {
     }
 }
 
+/// The supported output color spaces.
+pub enum ColorSpace {
+    Linear,
+    Srgb,
+}
+
 /// Configuration for the renderer.
-pub struct RendererConfig<'vs, 'fs> {
+pub struct RendererConfig<'s> {
     pub texture_format: TextureFormat,
     pub depth_format: Option<TextureFormat>,
     pub sample_count: u32,
-    pub vertex_shader: Option<ShaderModuleDescriptor<'vs>>,
-    pub fragment_shader: Option<ShaderModuleDescriptor<'fs>>,
+    pub shader: Option<ShaderModuleDescriptor<'s>>,
+    pub color_space: ColorSpace,
 }
 
-impl RendererConfig<'_, '_> {
+impl RendererConfig<'_> {
     /// Create a new renderer config with custom shaders.
-    pub fn with_shaders<'vs, 'fs>(
-        vertex_shader: ShaderModuleDescriptor<'vs>,
-        fragment_shader: ShaderModuleDescriptor<'fs>,
-    ) -> RendererConfig<'vs, 'fs> {
+    pub fn with_shaders<'s>(shader: ShaderModuleDescriptor<'s>) -> RendererConfig<'s> {
+        Self::with_shaders_and_color_space(shader, ColorSpace::Linear)
+    }
+
+    /// Create a new renderer config with custom shaders in the desired output color space.
+    pub fn with_shaders_and_color_space<'s>(
+        shader: ShaderModuleDescriptor<'s>,
+        color_space: ColorSpace,
+    ) -> RendererConfig<'s> {
         RendererConfig {
             texture_format: TextureFormat::Rgba8Unorm,
             depth_format: None,
             sample_count: 1,
-            vertex_shader: Some(vertex_shader),
-            fragment_shader: Some(fragment_shader),
+            shader: Some(shader),
+            color_space,
         }
     }
 }
 
-impl Default for RendererConfig<'_, '_> {
+impl Default for RendererConfig<'_> {
     /// Create a new renderer config with precompiled default shaders outputting linear color.
     ///
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
@@ -260,25 +271,19 @@ impl Default for RendererConfig<'_, '_> {
     }
 }
 
-impl RendererConfig<'_, '_> {
+impl RendererConfig<'_> {
     /// Create a new renderer config with precompiled default shaders outputting linear color.
     ///
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
     pub fn new() -> Self {
-        Self::with_shaders(
-            include_spirv!("imgui.vert.spv"),
-            include_spirv!("imgui-linear.frag.spv"),
-        )
+        Self::with_shaders_and_color_space(include_wgsl!("imgui.wgsl"), ColorSpace::Linear)
     }
 
     /// Create a new renderer config with precompiled default shaders outputting srgb color.
     ///
     /// If you write to a Bgra8Unorm framebuffer, this is what you want.
     pub fn new_srgb() -> Self {
-        Self::with_shaders(
-            include_spirv!("imgui.vert.spv"),
-            include_spirv!("imgui-srgb.frag.spv"),
-        )
+        Self::with_shaders_and_color_space(include_wgsl!("imgui.wgsl"), ColorSpace::Srgb)
     }
 }
 
@@ -291,7 +296,7 @@ pub struct Renderer {
     texture_layout: BindGroupLayout,
     index_buffers: SmallVec<[Buffer; 4]>,
     vertex_buffers: SmallVec<[Buffer; 4]>,
-    config: RendererConfig<'static, 'static>,
+    config: RendererConfig<'static>,
 }
 
 impl Renderer {
@@ -306,13 +311,12 @@ impl Renderer {
             texture_format,
             depth_format,
             sample_count,
-            vertex_shader,
-            fragment_shader,
+            shader,
+            color_space,
         } = config;
 
         // Load shaders.
-        let vs_module = device.create_shader_module(&vertex_shader.unwrap());
-        let fs_module = device.create_shader_module(&fragment_shader.unwrap());
+        let shader_module = device.create_shader_module(&shader.unwrap());
 
         // Create the uniform matrix buffer.
         let size = 64;
@@ -387,8 +391,8 @@ impl Renderer {
             label: Some("imgui-wgpu pipeline"),
             layout: Some(&pipeline_layout),
             vertex: VertexState {
-                module: &vs_module,
-                entry_point: "main",
+                module: &shader_module,
+                entry_point: "vs_main",
                 buffers: &[VertexBufferLayout {
                     array_stride: size_of::<DrawVert>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
@@ -416,8 +420,11 @@ impl Renderer {
                 ..Default::default()
             },
             fragment: Some(FragmentState {
-                module: &fs_module,
-                entry_point: "main",
+                module: &shader_module,
+                entry_point: match color_space {
+                    ColorSpace::Linear => "fs_main_linear",
+                    ColorSpace::Srgb => "fs_main_srgb",
+                },
                 targets: &[ColorTargetState {
                     format: texture_format,
                     blend: Some(BlendState {
@@ -449,8 +456,8 @@ impl Renderer {
                 texture_format,
                 depth_format,
                 sample_count,
-                vertex_shader: None,
-                fragment_shader: None,
+                shader: None,
+                color_space: ColorSpace::Linear,
             },
         };
 
