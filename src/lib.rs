@@ -260,14 +260,21 @@ impl Default for RendererConfig<'_, '_> {
     }
 }
 
+/// Load a SPIR-V shader module from the Cargo OUT_DIR.
+macro_rules! include_compiled_spirv {
+    ($path:literal) => {
+        include_spirv!(concat!(env!("OUT_DIR"), "/", $path))
+    }
+}
+
 impl RendererConfig<'_, '_> {
     /// Create a new renderer config with precompiled default shaders outputting linear color.
     ///
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
     pub fn new() -> Self {
         Self::with_shaders(
-            include_spirv!("imgui.vert.spv"),
-            include_spirv!("imgui-linear.frag.spv"),
+            include_compiled_spirv!("imgui.vert.spv"),
+            include_compiled_spirv!("imgui-linear.frag.spv"),
         )
     }
 
@@ -276,8 +283,8 @@ impl RendererConfig<'_, '_> {
     /// If you write to a Bgra8Unorm framebuffer, this is what you want.
     pub fn new_srgb() -> Self {
         Self::with_shaders(
-            include_spirv!("imgui.vert.spv"),
-            include_spirv!("imgui-srgb.frag.spv"),
+            include_compiled_spirv!("imgui.vert.spv"),
+            include_compiled_spirv!("imgui-srgb.frag.spv"),
         )
     }
 }

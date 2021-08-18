@@ -27,6 +27,9 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+#### Added
+- Internal: Use `naga` to automatically compile SPIR-V shaders
+
 ## v0.16.0
 
 Released 2021-07-14

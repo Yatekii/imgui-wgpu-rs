@@ -66,6 +66,9 @@ imgui-winit-support = { version = "0.7", optional = true }
 pollster = { version = "0.2.0", optional = true } # for block_on executor
 winit = { version = ">= 0.23, < 0.25", optional = true }
 
+[build-dependencies]
+naga = { version = "0.6", features = ["glsl-in", "spv-out"] }
+
 [dev-dependencies]
 bytemuck = { version = "1.4", features = ["derive"] }
 cgmath = "0.18"
