@@ -27,6 +27,9 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+#### Fixed
+- Internal: fix all warnings from static analysis (clippy).
+
 ## v0.16.0
 
 Released 2021-07-14

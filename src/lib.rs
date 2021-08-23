@@ -515,7 +515,7 @@ impl Renderer {
         for (draw_list_buffers_index, draw_list) in draw_data.draw_lists().enumerate() {
             self.render_draw_list(
                 rpass,
-                &draw_list,
+                draw_list,
                 draw_data.display_pos,
                 draw_data.framebuffer_scale,
                 draw_list_buffers_index,
@@ -592,7 +592,7 @@ impl Renderer {
             std::slice::from_raw_parts(vertices.as_ptr() as *mut DrawVertPod, vertices.len())
         };
 
-        let data = bytemuck::cast_slice(&vertices);
+        let data = bytemuck::cast_slice(vertices);
         device.create_buffer_init(&BufferInitDescriptor {
             label: Some("imgui-wgpu vertex buffer"),
             contents: data,
@@ -602,7 +602,7 @@ impl Renderer {
 
     /// Upload the index buffer to the GPU.
     fn upload_index_buffer(&self, device: &Device, indices: &[DrawIdx]) -> Buffer {
-        let data = bytemuck::cast_slice(&indices);
+        let data = bytemuck::cast_slice(indices);
 
         device.create_buffer_init(&BufferInitDescriptor {
             label: Some("imgui-wgpu index buffer"),
@@ -632,7 +632,7 @@ impl Renderer {
         };
 
         let font_texture = Texture::new(device, self, font_texture_cnfig);
-        font_texture.write(&queue, handle.data, handle.width, handle.height);
+        font_texture.write(queue, handle.data, handle.width, handle.height);
         fonts.tex_id = self.textures.insert(font_texture);
         // Clear imgui texture data to save memory.
         fonts.clear_tex_data();
