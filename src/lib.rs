@@ -8,6 +8,10 @@ use std::{error::Error, num::NonZeroU32};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
+static VS_ENTRY_POINT: &str = "vs_main";
+static FS_ENTRY_POINT_LINEAR: &str = "fs_main_linear";
+static FS_ENTRY_POINT_SRGB: &str = "fs_main_srgb";
+
 pub type RendererResult<T> = Result<T, RendererError>;
 
 #[cfg(feature = "simple_api_unstable")]
@@ -226,38 +230,26 @@ impl Texture {
     }
 }
 
-/// The supported output color spaces.
-pub enum ColorSpace {
-    Linear,
-    Srgb,
-}
-
 /// Configuration for the renderer.
 pub struct RendererConfig<'s> {
     pub texture_format: TextureFormat,
     pub depth_format: Option<TextureFormat>,
     pub sample_count: u32,
     pub shader: Option<ShaderModuleDescriptor<'s>>,
-    pub color_space: ColorSpace,
+    pub vertex_shader_entry_point: String,
+    pub fragment_shader_entry_point: String,
 }
 
 impl RendererConfig<'_> {
     /// Create a new renderer config with custom shaders.
     pub fn with_shaders<'s>(shader: ShaderModuleDescriptor<'s>) -> RendererConfig<'s> {
-        Self::with_shaders_and_color_space(shader, ColorSpace::Linear)
-    }
-
-    /// Create a new renderer config with custom shaders in the desired output color space.
-    pub fn with_shaders_and_color_space<'s>(
-        shader: ShaderModuleDescriptor<'s>,
-        color_space: ColorSpace,
-    ) -> RendererConfig<'s> {
         RendererConfig {
             texture_format: TextureFormat::Rgba8Unorm,
             depth_format: None,
             sample_count: 1,
             shader: Some(shader),
-            color_space,
+            vertex_shader_entry_point: VS_ENTRY_POINT.to_string(),
+            fragment_shader_entry_point: FS_ENTRY_POINT_LINEAR.to_string(),
         }
     }
 }
@@ -276,14 +268,20 @@ impl RendererConfig<'_> {
     ///
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
     pub fn new() -> Self {
-        Self::with_shaders_and_color_space(include_wgsl!("imgui.wgsl"), ColorSpace::Linear)
+        RendererConfig {
+            fragment_shader_entry_point: FS_ENTRY_POINT_LINEAR.to_string(),
+            ..Self::with_shaders(include_wgsl!("imgui.wgsl"))
+        }
     }
 
     /// Create a new renderer config with precompiled default shaders outputting srgb color.
     ///
     /// If you write to a Bgra8Unorm framebuffer, this is what you want.
     pub fn new_srgb() -> Self {
-        Self::with_shaders_and_color_space(include_wgsl!("imgui.wgsl"), ColorSpace::Srgb)
+        RendererConfig {
+            fragment_shader_entry_point: FS_ENTRY_POINT_SRGB.to_string(),
+            ..Self::with_shaders(include_wgsl!("imgui.wgsl"))
+        }
     }
 }
 
@@ -312,7 +310,8 @@ impl Renderer {
             depth_format,
             sample_count,
             shader,
-            color_space,
+            vertex_shader_entry_point,
+            fragment_shader_entry_point,
         } = config;
 
         // Load shaders.
@@ -392,7 +391,7 @@ impl Renderer {
             layout: Some(&pipeline_layout),
             vertex: VertexState {
                 module: &shader_module,
-                entry_point: "vs_main",
+                entry_point: &vertex_shader_entry_point,
                 buffers: &[VertexBufferLayout {
                     array_stride: size_of::<DrawVert>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
@@ -421,10 +420,7 @@ impl Renderer {
             },
             fragment: Some(FragmentState {
                 module: &shader_module,
-                entry_point: match color_space {
-                    ColorSpace::Linear => "fs_main_linear",
-                    ColorSpace::Srgb => "fs_main_srgb",
-                },
+                entry_point: &fragment_shader_entry_point,
                 targets: &[ColorTargetState {
                     format: texture_format,
                     blend: Some(BlendState {
@@ -457,7 +453,8 @@ impl Renderer {
                 depth_format,
                 sample_count,
                 shader: None,
-                color_space: ColorSpace::Linear,
+                vertex_shader_entry_point,
+                fragment_shader_entry_point,
             },
         };
 
