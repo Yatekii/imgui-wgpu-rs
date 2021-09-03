@@ -57,7 +57,7 @@ pub struct TextureConfig<'a> {
     /// The format of the texture, if not set uses the format from the renderer.
     pub format: Option<TextureFormat>,
     /// The usage of the texture.
-    pub usage: TextureUsage,
+    pub usage: TextureUsages,
     /// The mip level of the texture.
     pub mip_level_count: u32,
     /// The sample count of the texture.
@@ -77,7 +77,7 @@ impl<'a> Default for TextureConfig<'a> {
             },
             label: None,
             format: None,
-            usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
+            usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
@@ -177,6 +177,7 @@ impl Texture {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: Origin3d { x: 0, y: 0, z: 0 },
+                aspect: TextureAspect::All,
             },
             // source bitmap data
             data,
@@ -319,7 +320,7 @@ impl Renderer {
         let uniform_buffer = device.create_buffer(&BufferDescriptor {
             label: Some("imgui-wgpu uniform buffer"),
             size,
-            usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
@@ -328,7 +329,7 @@ impl Renderer {
             label: None,
             entries: &[BindGroupLayoutEntry {
                 binding: 0,
-                visibility: wgpu::ShaderStage::VERTEX,
+                visibility: wgpu::ShaderStages::VERTEX,
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
                     has_dynamic_offset: false,
@@ -354,7 +355,7 @@ impl Renderer {
             entries: &[
                 BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: BindingType::Texture {
                         multisampled: false,
                         sample_type: TextureSampleType::Float { filterable: true },
@@ -364,7 +365,7 @@ impl Renderer {
                 },
                 BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: BindingType::Sampler {
                         comparison: false,
                         filtering: true,
@@ -391,7 +392,7 @@ impl Renderer {
                 entry_point: "main",
                 buffers: &[VertexBufferLayout {
                     array_stride: size_of::<DrawVert>() as BufferAddress,
-                    step_mode: InputStepMode::Vertex,
+                    step_mode: VertexStepMode::Vertex,
                     attributes: &vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Unorm8x4],
                 }],
             },
@@ -432,7 +433,7 @@ impl Renderer {
                             operation: BlendOperation::Add,
                         },
                     }),
-                    write_mask: ColorWrite::ALL,
+                    write_mask: ColorWrites::ALL,
                 }],
             }),
         });
@@ -596,7 +597,7 @@ impl Renderer {
         device.create_buffer_init(&BufferInitDescriptor {
             label: Some("imgui-wgpu vertex buffer"),
             contents: data,
-            usage: BufferUsage::VERTEX,
+            usage: BufferUsages::VERTEX,
         })
     }
 
@@ -607,7 +608,7 @@ impl Renderer {
         device.create_buffer_init(&BufferInitDescriptor {
             label: Some("imgui-wgpu index buffer"),
             contents: data,
-            usage: BufferUsage::INDEX,
+            usage: BufferUsages::INDEX,
         })
     }
 
