@@ -521,6 +521,7 @@ impl Renderer {
             self.render_draw_list(
                 rpass,
                 draw_list,
+                [fb_width, fb_height],
                 draw_data.display_pos,
                 draw_data.framebuffer_scale,
                 draw_list_buffers_index,
@@ -535,6 +536,7 @@ impl Renderer {
         &'render self,
         rpass: &mut RenderPass<'render>,
         draw_list: &DrawList,
+        fb_size: [f32; 2],
         clip_off: [f32; 2],
         clip_scale: [f32; 2],
         draw_list_buffers_index: usize,
@@ -566,17 +568,34 @@ impl Renderer {
                 rpass.set_bind_group(1, &tex.bind_group, &[]);
 
                 // Set scissors on the renderpass.
-                let scissors = (
-                    clip_rect[0].max(0.0).floor() as u32,
-                    clip_rect[1].max(0.0).floor() as u32,
-                    (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
-                    (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
-                );
-                rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
-
-                // Draw the current batch of vertices with the renderpass.
                 let end = start + count as u32;
-                rpass.draw_indexed(start..end, 0, 0..1);
+                if clip_rect[0] < fb_size[0]
+                    && clip_rect[1] < fb_size[1]
+                    && clip_rect[2] >= 0.0
+                    && clip_rect[3] >= 0.0
+                {
+                    let scissors = (
+                        clip_rect[0].max(0.0).floor() as u32,
+                        clip_rect[1].max(0.0).floor() as u32,
+                        (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
+                        (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
+                    );
+
+                    // XXX: Work-around for wgpu issue [1] by only issuing draw
+                    // calls if the scissor rect is valid (by wgpu's flawed
+                    // logic). Regardless, a zero-width or zero-height scissor
+                    // is essentially a no-op render anyway, so just skip it.
+                    // [1]: https://github.com/gfx-rs/wgpu/issues/1750
+                    if scissors.2 > 0 && scissors.3 > 0 {
+                        rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
+
+                        // Draw the current batch of vertices with the renderpass.
+                        rpass.draw_indexed(start..end, 0, 0..1);
+                    }
+                }
+
+                // Increment the index regardless of whether or not this batch
+                // of vertices was drawn.
                 start = end;
             }
         }

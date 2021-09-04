@@ -35,6 +35,8 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 #### Fixed
 - Internal: fix all warnings from static analysis (clippy).
+- Internal: Do not render draw commands that fall outside the framebuffer
+- Internal: Avoid wgpu logic error by not rendering empty clip rects
 
 ## v0.16.0
 
