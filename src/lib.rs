@@ -236,8 +236,8 @@ pub struct RendererConfig<'s> {
     pub depth_format: Option<TextureFormat>,
     pub sample_count: u32,
     pub shader: Option<ShaderModuleDescriptor<'s>>,
-    pub vertex_shader_entry_point: String,
-    pub fragment_shader_entry_point: String,
+    pub vertex_shader_entry_point: Option<&'s str>,
+    pub fragment_shader_entry_point: Option<&'s str>,
 }
 
 impl RendererConfig<'_> {
@@ -248,8 +248,8 @@ impl RendererConfig<'_> {
             depth_format: None,
             sample_count: 1,
             shader: Some(shader),
-            vertex_shader_entry_point: VS_ENTRY_POINT.to_string(),
-            fragment_shader_entry_point: FS_ENTRY_POINT_LINEAR.to_string(),
+            vertex_shader_entry_point: Some(VS_ENTRY_POINT),
+            fragment_shader_entry_point: Some(FS_ENTRY_POINT_LINEAR),
         }
     }
 }
@@ -269,7 +269,7 @@ impl RendererConfig<'_> {
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
     pub fn new() -> Self {
         RendererConfig {
-            fragment_shader_entry_point: FS_ENTRY_POINT_LINEAR.to_string(),
+            fragment_shader_entry_point: Some(FS_ENTRY_POINT_LINEAR),
             ..Self::with_shaders(include_wgsl!("imgui.wgsl"))
         }
     }
@@ -279,7 +279,7 @@ impl RendererConfig<'_> {
     /// If you write to a Bgra8Unorm framebuffer, this is what you want.
     pub fn new_srgb() -> Self {
         RendererConfig {
-            fragment_shader_entry_point: FS_ENTRY_POINT_SRGB.to_string(),
+            fragment_shader_entry_point: Some(FS_ENTRY_POINT_SRGB),
             ..Self::with_shaders(include_wgsl!("imgui.wgsl"))
         }
     }
@@ -391,7 +391,7 @@ impl Renderer {
             layout: Some(&pipeline_layout),
             vertex: VertexState {
                 module: &shader_module,
-                entry_point: &vertex_shader_entry_point,
+                entry_point: vertex_shader_entry_point.unwrap(),
                 buffers: &[VertexBufferLayout {
                     array_stride: size_of::<DrawVert>() as BufferAddress,
                     step_mode: InputStepMode::Vertex,
@@ -420,7 +420,7 @@ impl Renderer {
             },
             fragment: Some(FragmentState {
                 module: &shader_module,
-                entry_point: &fragment_shader_entry_point,
+                entry_point: fragment_shader_entry_point.unwrap(),
                 targets: &[ColorTargetState {
                     format: texture_format,
                     blend: Some(BlendState {
@@ -453,8 +453,8 @@ impl Renderer {
                 depth_format,
                 sample_count,
                 shader: None,
-                vertex_shader_entry_point,
-                fragment_shader_entry_point,
+                vertex_shader_entry_point: None,
+                fragment_shader_entry_point: None,
             },
         };
 
