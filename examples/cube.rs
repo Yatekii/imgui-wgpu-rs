@@ -126,7 +126,7 @@ impl Example {
 
 impl Example {
     fn init(
-        sc_desc: &wgpu::SwapChainDescriptor,
+        surface_desc: &wgpu::SurfaceConfiguration,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> Self {
@@ -139,13 +139,13 @@ impl Example {
         let vertex_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(&vertex_data),
-            usage: wgpu::BufferUsage::VERTEX,
+            usage: wgpu::BufferUsages::VERTEX,
         });
 
         let index_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Index Buffer"),
             contents: bytemuck::cast_slice(&index_data),
-            usage: wgpu::BufferUsage::INDEX,
+            usage: wgpu::BufferUsages::INDEX,
         });
 
         // Create pipeline layout
@@ -154,7 +154,7 @@ impl Example {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStage::VERTEX,
+                    visibility: wgpu::ShaderStages::VERTEX,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -164,7 +164,7 @@ impl Example {
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Texture {
                         multisampled: false,
                         sample_type: wgpu::TextureSampleType::Float { filterable: true },
@@ -174,7 +174,7 @@ impl Example {
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 2,
-                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Sampler {
                         filtering: true,
                         comparison: false,
@@ -204,7 +204,7 @@ impl Example {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         });
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         queue.write_texture(
@@ -212,6 +212,7 @@ impl Example {
                 texture: &texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
             },
             &texels,
             wgpu::ImageDataLayout {
@@ -232,12 +233,13 @@ impl Example {
             mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
-        let mx_total = Self::generate_matrix(sc_desc.width as f32 / sc_desc.height as f32, 0.0);
+        let mx_total =
+            Self::generate_matrix(surface_desc.width as f32 / surface_desc.height as f32, 0.0);
         let mx_ref: &[f32; 16] = mx_total.as_ref();
         let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Uniform Buffer"),
             contents: bytemuck::cast_slice(mx_ref),
-            usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
         // Create bind group
@@ -274,7 +276,7 @@ impl Example {
                 entry_point: "main",
                 buffers: &[wgpu::VertexBufferLayout {
                     array_stride: vertex_size as wgpu::BufferAddress,
-                    step_mode: wgpu::InputStepMode::Vertex,
+                    step_mode: wgpu::VertexStepMode::Vertex,
                     attributes: &[
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
@@ -300,12 +302,12 @@ impl Example {
                 module: &fs_module,
                 entry_point: "main",
                 targets: &[wgpu::ColorTargetState {
-                    format: sc_desc.format,
+                    format: surface_desc.format,
                     blend: Some(BlendState {
                         color: wgpu::BlendComponent::REPLACE,
                         alpha: wgpu::BlendComponent::REPLACE,
                     }),
-                    write_mask: wgpu::ColorWrite::ALL,
+                    write_mask: wgpu::ColorWrites::ALL,
                 }],
             }),
         });
@@ -373,7 +375,7 @@ fn main() {
     // Set up window and GPU
     let event_loop = EventLoop::new();
 
-    let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
+    let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
 
     let (window, size, surface) = {
         let version = env!("CARGO_PKG_VERSION");
@@ -399,26 +401,19 @@ fn main() {
     }))
     .unwrap();
 
-    let (device, queue) = block_on(adapter.request_device(
-        &wgpu::DeviceDescriptor {
-            label: None,
-            features: wgpu::Features::empty(),
-            limits: wgpu::Limits::default(),
-        },
-        None,
-    ))
-    .unwrap();
+    let (device, queue) =
+        block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None)).unwrap();
 
     // Set up swap chain
-    let sc_desc = wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+    let surface_desc = wgpu::SurfaceConfiguration {
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
         height: size.height as u32,
         present_mode: wgpu::PresentMode::Mailbox,
     };
 
-    let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+    surface.configure(&device, &surface_desc);
 
     // Set up dear imgui
     let mut imgui = imgui::Context::create();
@@ -453,7 +448,7 @@ fn main() {
     // };
 
     let renderer_config = RendererConfig {
-        texture_format: sc_desc.format,
+        texture_format: surface_desc.format,
         ..Default::default()
     };
 
@@ -464,7 +459,7 @@ fn main() {
     let mut last_cursor = None;
 
     let mut example_size: [f32; 2] = [640.0, 480.0];
-    let mut example = Example::init(&sc_desc, &device, &queue);
+    let mut example = Example::init(&surface_desc, &device, &queue);
 
     // Stores a texture for displaying with imgui::Image(),
     // also as a texture view for rendering into it
@@ -475,7 +470,7 @@ fn main() {
             height: example_size[1] as u32,
             ..Default::default()
         },
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT | wgpu::TextureUsage::SAMPLED,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
         ..Default::default()
     };
 
@@ -496,15 +491,15 @@ fn main() {
             } => {
                 let size = window.inner_size();
 
-                let sc_desc = wgpu::SwapChainDescriptor {
-                    usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+                let surface_desc = wgpu::SurfaceConfiguration {
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,
                     height: size.height as u32,
                     present_mode: wgpu::PresentMode::Mailbox,
                 };
 
-                swap_chain = device.create_swap_chain(&surface, &sc_desc);
+                surface.configure(&device, &surface_desc);
             }
             Event::WindowEvent {
                 event:
@@ -531,7 +526,7 @@ fn main() {
                 imgui.io_mut().update_delta_time(now - last_frame);
                 last_frame = now;
 
-                let frame = match swap_chain.get_current_frame() {
+                let frame = match surface.get_current_frame() {
                     Ok(frame) => frame,
                     Err(e) => {
                         eprintln!("dropped frame: {:?}", e);
@@ -543,10 +538,15 @@ fn main() {
                     .expect("Failed to prepare frame");
                 let ui = imgui.frame();
 
+                let view = frame
+                    .output
+                    .texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
+
                 // Render example normally at background
                 example.update(ui.io().delta_time);
                 example.setup_camera(&queue, ui.io().display_size);
-                example.render(&frame.output.view, &device, &queue);
+                example.render(&view, &device, &queue);
 
                 // Store the new size of Image() or None to indicate that the window is collapsed.
                 let mut new_example_size: Option<[f32; 2]> = None;
@@ -569,8 +569,8 @@ fn main() {
                                 height: (example_size[1] * scale[1]) as u32,
                                 ..Default::default()
                             },
-                            usage: wgpu::TextureUsage::RENDER_ATTACHMENT
-                                | wgpu::TextureUsage::SAMPLED,
+                            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                                | wgpu::TextureUsages::TEXTURE_BINDING,
                             ..Default::default()
                         };
                         renderer.textures.replace(
@@ -599,7 +599,7 @@ fn main() {
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
                     color_attachments: &[wgpu::RenderPassColorAttachment {
-                        view: &frame.output.view,
+                        view: &view,
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Load, // Do not clear

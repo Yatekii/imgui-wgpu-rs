@@ -30,6 +30,9 @@ Per Keep a Changelog there are 6 main categories of changes:
 #### Changed
 - Internal: translate shaders from SPIR-V to WGSL
 
+#### Updated
+- updated `wgpu` to 0.10
+
 #### Fixed
 - Internal: fix all warnings from static analysis (clippy).
 

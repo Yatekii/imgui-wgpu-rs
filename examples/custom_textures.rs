@@ -17,7 +17,7 @@ fn main() {
     // Set up window and GPU
     let event_loop = EventLoop::new();
 
-    let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
+    let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
 
     let (window, size, surface) = {
         let version = env!("CARGO_PKG_VERSION");
@@ -54,15 +54,15 @@ fn main() {
     .unwrap();
 
     // Set up swap chain
-    let sc_desc = wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+    let surface_desc = wgpu::SurfaceConfiguration {
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
         height: size.height as u32,
         present_mode: wgpu::PresentMode::Mailbox,
     };
 
-    let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+    surface.configure(&device, &surface_desc);
 
     // Set up dear imgui
     let mut imgui = imgui::Context::create();
@@ -96,7 +96,7 @@ fn main() {
         a: 1.0,
     };
     let renderer_config = RendererConfig {
-        texture_format: sc_desc.format,
+        texture_format: surface_desc.format,
         ..Default::default()
     };
 
@@ -143,15 +143,15 @@ fn main() {
             } => {
                 let size = window.inner_size();
 
-                let sc_desc = wgpu::SwapChainDescriptor {
-                    usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+                let surface_desc = wgpu::SurfaceConfiguration {
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,
                     height: size.height as u32,
                     present_mode: wgpu::PresentMode::Mailbox,
                 };
 
-                swap_chain = device.create_swap_chain(&surface, &sc_desc);
+                surface.configure(&device, &surface_desc);
             }
             Event::WindowEvent {
                 event:
@@ -180,7 +180,7 @@ fn main() {
                 imgui.io_mut().update_delta_time(now - last_frame);
                 last_frame = now;
 
-                let frame = match swap_chain.get_current_frame() {
+                let frame = match surface.get_current_frame() {
                     Ok(frame) => frame,
                     Err(e) => {
                         eprintln!("dropped frame: {:?}", e);
@@ -212,10 +212,14 @@ fn main() {
                     platform.prepare_render(&ui, &window);
                 }
 
+                let view = frame
+                    .output
+                    .texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
                     color_attachments: &[wgpu::RenderPassColorAttachment {
-                        view: &frame.output.view,
+                        view: &view,
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(clear_color),

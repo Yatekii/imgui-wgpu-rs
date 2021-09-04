@@ -84,7 +84,7 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
     // Set up window and GPU
     let event_loop = EventLoop::new();
 
-    let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
+    let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
 
     let (window, size, surface) = {
         let window = Window::new(&event_loop).unwrap();
@@ -112,16 +112,15 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
         block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None)).unwrap();
 
     // Set up swap chain
-    let sc_desc = wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+    let surface_desc = wgpu::SurfaceConfiguration {
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
         height: size.height as u32,
-        // limits refresh rate to the monitor's refresh rate, not wasting power spinning very quickly
         present_mode: wgpu::PresentMode::Fifo,
     };
 
-    let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+    surface.configure(&device, &surface_desc);
 
     // Set up dear imgui
     let mut imgui = imgui::Context::create();
@@ -149,7 +148,7 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
     // Set up dear imgui wgpu renderer
     //
     let renderer_config = RendererConfig {
-        texture_format: sc_desc.format,
+        texture_format: surface_desc.format,
         ..Default::default()
     };
 
@@ -170,15 +169,15 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
             } => {
                 let size = window.inner_size();
 
-                let sc_desc = wgpu::SwapChainDescriptor {
-                    usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+                let surface_desc = wgpu::SurfaceConfiguration {
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,
                     height: size.height as u32,
-                    present_mode: wgpu::PresentMode::Mailbox,
+                    present_mode: wgpu::PresentMode::Fifo,
                 };
 
-                swap_chain = device.create_swap_chain(&surface, &sc_desc);
+                surface.configure(&device, &surface_desc);
 
                 (config.on_resize)(&size, &mut state, hidpi_factor);
             }
@@ -208,7 +207,7 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
                 imgui.io_mut().update_delta_time(now - last_frame);
                 last_frame = now;
 
-                let frame = match swap_chain.get_current_frame() {
+                let frame = match surface.get_current_frame() {
                     Ok(frame) => frame,
                     Err(e) => {
                         eprintln!("dropped frame: {:?}", e);
@@ -230,10 +229,14 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
                     platform.prepare_render(&ui, &window);
                 }
 
+                let view = frame
+                    .output
+                    .texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
                     color_attachments: &[wgpu::RenderPassColorAttachment {
-                        view: &frame.output.view,
+                        view: &view,
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(config.background_color),
