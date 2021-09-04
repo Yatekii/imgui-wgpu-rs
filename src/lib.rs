@@ -8,6 +8,10 @@ use std::{error::Error, num::NonZeroU32};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
+static VS_ENTRY_POINT: &str = "vs_main";
+static FS_ENTRY_POINT_LINEAR: &str = "fs_main_linear";
+static FS_ENTRY_POINT_SRGB: &str = "fs_main_srgb";
+
 pub type RendererResult<T> = Result<T, RendererError>;
 
 #[cfg(feature = "simple_api_unstable")]
@@ -228,31 +232,30 @@ impl Texture {
 }
 
 /// Configuration for the renderer.
-pub struct RendererConfig<'vs, 'fs> {
+pub struct RendererConfig<'s> {
     pub texture_format: TextureFormat,
     pub depth_format: Option<TextureFormat>,
     pub sample_count: u32,
-    pub vertex_shader: Option<ShaderModuleDescriptor<'vs>>,
-    pub fragment_shader: Option<ShaderModuleDescriptor<'fs>>,
+    pub shader: Option<ShaderModuleDescriptor<'s>>,
+    pub vertex_shader_entry_point: Option<&'s str>,
+    pub fragment_shader_entry_point: Option<&'s str>,
 }
 
-impl RendererConfig<'_, '_> {
+impl RendererConfig<'_> {
     /// Create a new renderer config with custom shaders.
-    pub fn with_shaders<'vs, 'fs>(
-        vertex_shader: ShaderModuleDescriptor<'vs>,
-        fragment_shader: ShaderModuleDescriptor<'fs>,
-    ) -> RendererConfig<'vs, 'fs> {
+    pub fn with_shaders<'s>(shader: ShaderModuleDescriptor<'s>) -> RendererConfig<'s> {
         RendererConfig {
             texture_format: TextureFormat::Rgba8Unorm,
             depth_format: None,
             sample_count: 1,
-            vertex_shader: Some(vertex_shader),
-            fragment_shader: Some(fragment_shader),
+            shader: Some(shader),
+            vertex_shader_entry_point: Some(VS_ENTRY_POINT),
+            fragment_shader_entry_point: Some(FS_ENTRY_POINT_LINEAR),
         }
     }
 }
 
-impl Default for RendererConfig<'_, '_> {
+impl Default for RendererConfig<'_> {
     /// Create a new renderer config with precompiled default shaders outputting linear color.
     ///
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
@@ -261,25 +264,25 @@ impl Default for RendererConfig<'_, '_> {
     }
 }
 
-impl RendererConfig<'_, '_> {
+impl RendererConfig<'_> {
     /// Create a new renderer config with precompiled default shaders outputting linear color.
     ///
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
     pub fn new() -> Self {
-        Self::with_shaders(
-            include_spirv!("imgui.vert.spv"),
-            include_spirv!("imgui-linear.frag.spv"),
-        )
+        RendererConfig {
+            fragment_shader_entry_point: Some(FS_ENTRY_POINT_LINEAR),
+            ..Self::with_shaders(include_wgsl!("imgui.wgsl"))
+        }
     }
 
     /// Create a new renderer config with precompiled default shaders outputting srgb color.
     ///
     /// If you write to a Bgra8Unorm framebuffer, this is what you want.
     pub fn new_srgb() -> Self {
-        Self::with_shaders(
-            include_spirv!("imgui.vert.spv"),
-            include_spirv!("imgui-srgb.frag.spv"),
-        )
+        RendererConfig {
+            fragment_shader_entry_point: Some(FS_ENTRY_POINT_SRGB),
+            ..Self::with_shaders(include_wgsl!("imgui.wgsl"))
+        }
     }
 }
 
@@ -292,7 +295,7 @@ pub struct Renderer {
     texture_layout: BindGroupLayout,
     index_buffers: SmallVec<[Buffer; 4]>,
     vertex_buffers: SmallVec<[Buffer; 4]>,
-    config: RendererConfig<'static, 'static>,
+    config: RendererConfig<'static>,
 }
 
 impl Renderer {
@@ -307,13 +310,13 @@ impl Renderer {
             texture_format,
             depth_format,
             sample_count,
-            vertex_shader,
-            fragment_shader,
+            shader,
+            vertex_shader_entry_point,
+            fragment_shader_entry_point,
         } = config;
 
         // Load shaders.
-        let vs_module = device.create_shader_module(&vertex_shader.unwrap());
-        let fs_module = device.create_shader_module(&fragment_shader.unwrap());
+        let shader_module = device.create_shader_module(&shader.unwrap());
 
         // Create the uniform matrix buffer.
         let size = 64;
@@ -388,8 +391,8 @@ impl Renderer {
             label: Some("imgui-wgpu pipeline"),
             layout: Some(&pipeline_layout),
             vertex: VertexState {
-                module: &vs_module,
-                entry_point: "main",
+                module: &shader_module,
+                entry_point: vertex_shader_entry_point.unwrap(),
                 buffers: &[VertexBufferLayout {
                     array_stride: size_of::<DrawVert>() as BufferAddress,
                     step_mode: VertexStepMode::Vertex,
@@ -417,8 +420,8 @@ impl Renderer {
                 ..Default::default()
             },
             fragment: Some(FragmentState {
-                module: &fs_module,
-                entry_point: "main",
+                module: &shader_module,
+                entry_point: fragment_shader_entry_point.unwrap(),
                 targets: &[ColorTargetState {
                     format: texture_format,
                     blend: Some(BlendState {
@@ -450,8 +453,9 @@ impl Renderer {
                 texture_format,
                 depth_format,
                 sample_count,
-                vertex_shader: None,
-                fragment_shader: None,
+                shader: None,
+                vertex_shader_entry_point: None,
+                fragment_shader_entry_point: None,
             },
         };
 
