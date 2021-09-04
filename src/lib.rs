@@ -241,9 +241,9 @@ pub struct RendererConfig<'s> {
     pub fragment_shader_entry_point: Option<&'s str>,
 }
 
-impl RendererConfig<'_> {
+impl<'s> RendererConfig<'s> {
     /// Create a new renderer config with custom shaders.
-    pub fn with_shaders<'s>(shader: ShaderModuleDescriptor<'s>) -> RendererConfig<'s> {
+    pub fn with_shaders(shader: ShaderModuleDescriptor<'s>) -> Self {
         RendererConfig {
             texture_format: TextureFormat::Rgba8Unorm,
             depth_format: None,
