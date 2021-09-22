@@ -194,12 +194,12 @@ fn main() {
 
                 {
                     let size = [width as f32, height as f32];
-                    let window = imgui::Window::new(im_str!("Hello world"));
+                    let window = imgui::Window::new("Hello world");
                     window
                         .size([400.0, 600.0], Condition::FirstUseEver)
                         .build(&ui, || {
-                            ui.text(im_str!("Hello textures!"));
-                            ui.text(im_str!("Say hello to Lenna.jpg"));
+                            ui.text("Hello textures!");
+                            ui.text("Say hello to Lenna.jpg");
                             Image::new(lenna_texture_id, size).build(&ui);
                         });
                 }
