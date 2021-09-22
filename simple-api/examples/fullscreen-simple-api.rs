@@ -1,8 +1,7 @@
 // you need to set --feature=simple_api_unstable to run this example
 // cargo run --example fullscreen_simple_api --features=simple_api_unstable
 
-use imgui::{im_str, Condition};
-use imgui_wgpu::simple_api;
+use imgui::Condition;
 
 struct State {
     last_frame: std::time::Instant,
@@ -12,7 +11,7 @@ struct State {
 }
 
 fn main() {
-    let config = simple_api::Config {
+    let config = imgui_wgpu_simple::Config {
         on_resize: &|input, state: &mut State, hdpi| {
             state.height = input.height as f32;
             state.width = input.width as f32;
@@ -28,10 +27,10 @@ fn main() {
         high_dpi_factor: 2.0,
     };
 
-    imgui_wgpu::simple_api::run(config, state, |ui, state| {
+    imgui_wgpu_simple::run(config, state, |ui, state| {
         let now = std::time::Instant::now();
 
-        imgui::Window::new(im_str!("full-window example"))
+        imgui::Window::new("full-window example")
             .position([0.0, 0.0], Condition::Always)
             .collapsible(false)
             .resizable(false)
@@ -44,7 +43,7 @@ fn main() {
             )
             .menu_bar(true)
             .build(&ui, || {
-                ui.text(im_str!("Hello world!"));
+                ui.text("Hello world!");
             });
 
         state.last_frame = now;

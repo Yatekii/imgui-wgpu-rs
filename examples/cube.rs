@@ -2,9 +2,8 @@ use bytemuck::{Pod, Zeroable};
 use imgui::*;
 use imgui_wgpu::{Renderer, RendererConfig, Texture, TextureConfig};
 use pollster::block_on;
-use std::num::NonZeroU32;
 use std::time::Instant;
-use wgpu::{util::DeviceExt, BlendState, Extent3d};
+use wgpu::{include_wgsl, util::DeviceExt, Extent3d};
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -12,12 +11,11 @@ use winit::{
     window::Window,
 };
 
-// Example code modified from https://github.com/gfx-rs/wgpu-rs/tree/master/examples/cube
-
 const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 1.0,
 );
 
+// Example code modified from https://github.com/gfx-rs/wgpu-rs/tree/master/examples/cube
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct Vertex {
@@ -79,10 +77,8 @@ fn create_vertices() -> (Vec<Vertex>, Vec<u16>) {
 }
 
 fn create_texels(size: usize) -> Vec<u8> {
-    use std::iter;
-
     (0..size * size)
-        .flat_map(|id| {
+        .map(|id| {
             // get high five for recognizing this ;)
             let cx = 3.0 * (id % size) as f32 / (size - 1) as f32 - 2.0;
             let cy = 2.0 * (id / size) as f32 / (size - 1) as f32 - 1.0;
@@ -93,10 +89,7 @@ fn create_texels(size: usize) -> Vec<u8> {
                 y = 2.0 * old_x * y + cy;
                 count += 1;
             }
-            iter::once(0xFF - (count * 5) as u8)
-                .chain(iter::once(0xFF - (count * 15) as u8))
-                .chain(iter::once(0xFF - (count * 50) as u8))
-                .chain(iter::once(1))
+            count
         })
         .collect()
 }
@@ -112,10 +105,10 @@ struct Example {
 }
 
 impl Example {
-    fn generate_matrix(aspect_ratio: f32, theta: f32) -> cgmath::Matrix4<f32> {
+    fn generate_matrix(aspect_ratio: f32) -> cgmath::Matrix4<f32> {
         let mx_projection = cgmath::perspective(cgmath::Deg(45f32), aspect_ratio, 1.0, 10.0);
         let mx_view = cgmath::Matrix4::look_at_rh(
-            cgmath::Point3::new(6.0 * theta.cos(), 6.0 * theta.sin(), 3.0),
+            cgmath::Point3::new(1.5f32, -5.0, 3.0),
             cgmath::Point3::new(0f32, 0.0, 0.0),
             cgmath::Vector3::unit_z(),
         );
@@ -126,7 +119,7 @@ impl Example {
 
 impl Example {
     fn init(
-        surface_desc: &wgpu::SurfaceConfiguration,
+        config: &wgpu::SurfaceConfiguration,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> Self {
@@ -167,17 +160,8 @@ impl Example {
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Texture {
                         multisampled: false,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        sample_type: wgpu::TextureSampleType::Uint,
                         view_dimension: wgpu::TextureViewDimension::D2,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler {
-                        filtering: true,
-                        comparison: false,
                     },
                     count: None,
                 },
@@ -203,38 +187,23 @@ impl Example {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            format: wgpu::TextureFormat::R8Uint,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         });
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         queue.write_texture(
-            wgpu::ImageCopyTexture {
-                texture: &texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
+            texture.as_image_copy(),
             &texels,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: NonZeroU32::new(4 * size),
+                bytes_per_row: Some(std::num::NonZeroU32::new(size).unwrap()),
                 rows_per_image: None,
             },
             texture_extent,
         );
 
         // Create other resources
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Nearest,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
-        let mx_total =
-            Self::generate_matrix(surface_desc.width as f32 / surface_desc.height as f32, 0.0);
+        let mx_total = Self::generate_matrix(config.width as f32 / config.height as f32);
         let mx_ref: &[f32; 16] = mx_total.as_ref();
         let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Uniform Buffer"),
@@ -254,62 +223,48 @@ impl Example {
                     binding: 1,
                     resource: wgpu::BindingResource::TextureView(&texture_view),
                 },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
-                },
             ],
             label: None,
         });
 
-        // Create the render pipeline
-        let vs_module =
-            device.create_shader_module(&wgpu::include_spirv!("../resources/cube.vert.spv"));
-        let fs_module =
-            device.create_shader_module(&wgpu::include_spirv!("../resources/cube.frag.spv"));
+        let shader = device.create_shader_module(&include_wgsl!("../resources/cube.wgsl"));
+
+        let vertex_buffers = [wgpu::VertexBufferLayout {
+            array_stride: vertex_size as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x4,
+                    offset: 0,
+                    shader_location: 0,
+                },
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x2,
+                    offset: 4 * 4,
+                    shader_location: 1,
+                },
+            ],
+        }];
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &vs_module,
-                entry_point: "main",
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: vertex_size as wgpu::BufferAddress,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 4 * 4,
-                            shader_location: 1,
-                        },
-                    ],
-                }],
+                module: &shader,
+                entry_point: "vs_main",
+                buffers: &vertex_buffers,
             },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: "fs_main",
+                targets: &[config.format.into()],
+            }),
             primitive: wgpu::PrimitiveState {
-                front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
                 ..Default::default()
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &fs_module,
-                entry_point: "main",
-                targets: &[wgpu::ColorTargetState {
-                    format: surface_desc.format,
-                    blend: Some(BlendState {
-                        color: wgpu::BlendComponent::REPLACE,
-                        alpha: wgpu::BlendComponent::REPLACE,
-                    }),
-                    write_mask: wgpu::ColorWrites::ALL,
-                }],
-            }),
         });
 
         // Done
@@ -329,7 +284,7 @@ impl Example {
     }
 
     fn setup_camera(&mut self, queue: &wgpu::Queue, size: [f32; 2]) {
-        let mx_total = Self::generate_matrix(size[0] / size[1], self.time * 0.1);
+        let mx_total = Self::generate_matrix(size[0] / size[1]);
         let mx_ref: &[f32; 16] = mx_total.as_ref();
         queue.write_buffer(&self.uniform_buf, 0, bytemuck::cast_slice(mx_ref));
     }
@@ -341,14 +296,14 @@ impl Example {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
                 color_attachments: &[wgpu::RenderPassColorAttachment {
-                    view: &view,
+                    view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
                             r: 0.1,
                             g: 0.2,
                             b: 0.3,
-                            a: 0.1, // semi-transparent background
+                            a: 1.0,
                         }),
                         store: true,
                     },
@@ -551,7 +506,7 @@ fn main() {
                 // Store the new size of Image() or None to indicate that the window is collapsed.
                 let mut new_example_size: Option<[f32; 2]> = None;
 
-                imgui::Window::new(im_str!("Cube"))
+                imgui::Window::new("Cube")
                     .size([512.0, 512.0], Condition::FirstUseEver)
                     .build(&ui, || {
                         new_example_size = Some(ui.content_region_avail());

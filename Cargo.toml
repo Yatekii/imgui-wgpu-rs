@@ -1,3 +1,8 @@
+[workspace]
+members = [".", "simple-api"]
+default-members = [".", "simple-api"]
+resolver = "2"
+
 [package]
 name = "imgui-wgpu"
 version = "0.17.0"
@@ -11,21 +16,12 @@ readme = "README.md"
 categories = ["gui", "graphics", "rendering", "rendering::graphics-api"]
 keywords = ["gui", "graphics", "wgpu", "imgui"]
 license = "MIT OR Apache-2.0"
-resolver = "2"
 
 exclude = [
 	".gitignore",
 	".github",
 	"resources",
 ]
-
-[[example]]
-name = "basic_simple_api"
-required-features = ["simple_api_unstable"]
-
-[[example]]
-name = "fullscreen_simple_api"
-required-features = ["simple_api_unstable"]
 
 [[package.metadata.release.pre-release-replacements]]
 file = "CHANGELOG.md"
@@ -50,32 +46,22 @@ search = "<!-- Begin Diffs -->"
 replace = "- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v{{version}}...HEAD)"
 min = 0  # allow non-first increment
 
-[features]
-# used in src/simple_api.rs
-default = []
-simple_api_unstable = [ "winit", "pollster", "imgui-winit-support" ]
-
 [dependencies]
 bytemuck = "1"
-imgui = "0.7"
+imgui = ">=0.1, <0.9"
 log = "0.4"
 smallvec = "1"
-wgpu = { version = "0.10", features = ["spirv"] }
-
-# deps for simple_api_unstable
-imgui-winit-support = { version = "0.7", optional = true }
-pollster = { version = "0.2.0", optional = true } # for block_on executor
-winit = { version = ">= 0.23, < 0.25", optional = true }
+wgpu = "0.10"
 
 [dev-dependencies]
 bytemuck = { version = "1.4", features = ["derive"] }
 cgmath = "0.18"
 env_logger = "0.9"
 image = { version = "0.23", default-features = false, features = ["jpeg"] }
-imgui-winit-support = "0.7"
+imgui-winit-support = "0.8"
 pollster = "0.2"
 raw-window-handle = "0.3"
-winit = "0.24"
+winit = "0.25"
 
 [package.metadata.docs.rs]
 all-features = true

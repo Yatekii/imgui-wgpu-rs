@@ -28,6 +28,12 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+#### Updated
+- updated imgui dependency to `>=0.1,<0.9`
+
+#### Removed
+- unstable simple-api is now it's own, unpublished, crate.
+
 ## v0.17.0
 
 Released 2021-09-04

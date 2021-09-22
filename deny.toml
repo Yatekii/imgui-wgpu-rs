@@ -18,14 +18,13 @@ skip = [
     { name = "dlib", version = "0.4.2" },
     { name = "libloading", version = "0.6.7" },
     { name = "nix", version = "0.18.0" },
-    { name = "winapi", version = "0.2.8" },
+    { name = "proc-macro-crate", version = "0.1.5" },
 ]
 
 [advisories]
 vulnerability = "deny"
 unmaintained = "deny"
 ignore = [
-    "RUSTSEC-2020-0016"
 ]
 
 [sources]

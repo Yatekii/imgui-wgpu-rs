@@ -1,30 +1,7 @@
-/*!
-A simple API to get an imgui context in only a few lines of code.
+extern crate imgui_winit_support;
 
-
-This API only provides stability on a best efforts basis because its meant for small/ temporary projects like if you need to quickly plot something
-and just need a context do some imgui work.
-
-It aims to make updating the wgpu imgui bindings easier to use as it abstracts all the setup. This comes with the drawback of yet another API.
-
-It is basically a wrapper around the hello world example with a few customization options.
-
-The API consists of a Config which you may not need to touch and just use the Default one.
-Optionally, you can provide your own Struct to have a place to store mutable state in your small application.
-
-```no_run
-fn main() {
-    imgui_wgpu::simple_api::run(Default::default(), (), |ui, _| {
-        imgui::Window::new(imgui::im_str!("hello world")).build(&ui, || {
-            ui.text(imgui::im_str!("Hello world!"));
-        });
-    });
-}
-```
-*/
-
-use crate::{Renderer, RendererConfig};
 use imgui::*;
+use imgui_wgpu::{Renderer, RendererConfig};
 use pollster::block_on;
 
 use std::time::Instant;
@@ -35,64 +12,23 @@ use winit::{
     window::Window,
 };
 
-/// use `Default::default` if you don't need anything specific.
-pub struct Config<State: 'static> {
-    /// name of the window
-    pub window_title: String,
-    /// can be used to resize the window
-    pub initial_window_width: f32,
-    /// can be used to resize the window
-    pub initial_window_height: f32,
-    /// if you want to adjust your imgui window to match the size of the outer window
-    /// this makes it possible to have a "fullscreen" imgui window spanning the whole current window.
-    pub on_resize: &'static dyn Fn(&winit::dpi::PhysicalSize<u32>, &mut State, f64),
-    /// called after the premade events have been handled which includes close request
-    /// if you think you need to handle this, this api abstraction is probably to high level
-    /// and you may want to copy the code from hello_world.rs and adapt directly
-    pub on_event: &'static dyn Fn(&winit::event::WindowEvent<'_>, &mut State),
-    /// font size
-    pub font_size: Option<f32>,
-    /// color that fills the window
-    pub background_color: wgpu::Color,
-}
+fn main() {
+    env_logger::init();
 
-impl<State> Default for Config<State> {
-    fn default() -> Self {
-        Self {
-            window_title: "imgui".to_string(),
-            initial_window_width: 1200.0,
-            initial_window_height: 720.0,
-            on_resize: &|_, _, _| {},
-            on_event: &|_, _| {},
-            font_size: None,
-            background_color: wgpu::Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 1.0,
-            },
-        }
-    }
-}
-
-/// simple function to draw imgui
-pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourState)>(
-    config: Config<YourState>,
-    mut state: YourState,
-    render_ui: UiFunction,
-) {
     // Set up window and GPU
     let event_loop = EventLoop::new();
 
     let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
 
     let (window, size, surface) = {
+        let version = env!("CARGO_PKG_VERSION");
+
         let window = Window::new(&event_loop).unwrap();
         window.set_inner_size(LogicalSize {
-            width: config.initial_window_width,
-            height: config.initial_window_height,
+            width: 1280.0,
+            height: 720.0,
         });
-        window.set_title(&config.window_title);
+        window.set_title(&format!("imgui-wgpu {}", version));
         let size = window.inner_size();
 
         let surface = unsafe { instance.create_surface(&window) };
@@ -117,7 +53,7 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
         height: size.height as u32,
-        present_mode: wgpu::PresentMode::Fifo,
+        present_mode: wgpu::PresentMode::Mailbox,
     };
 
     surface.configure(&device, &surface_desc);
@@ -132,7 +68,7 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
     );
     imgui.set_ini_filename(None);
 
-    let font_size = config.font_size.unwrap_or((13.0 * hidpi_factor) as f32);
+    let font_size = (13.0 * hidpi_factor) as f32;
     imgui.io_mut().font_global_scale = (1.0 / hidpi_factor) as f32;
 
     imgui.fonts().add_font(&[FontSource::DefaultFontData {
@@ -147,6 +83,13 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
     //
     // Set up dear imgui wgpu renderer
     //
+    let clear_color = wgpu::Color {
+        r: 0.1,
+        g: 0.2,
+        b: 0.3,
+        a: 1.0,
+    };
+
     let renderer_config = RendererConfig {
         texture_format: surface_desc.format,
         ..Default::default()
@@ -155,13 +98,17 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
     let mut renderer = Renderer::new(&mut imgui, &device, &queue, renderer_config);
 
     let mut last_frame = Instant::now();
+    let mut demo_open = true;
 
     let mut last_cursor = None;
 
     // Event loop
     event_loop.run(move |event, _, control_flow| {
-        *control_flow = ControlFlow::Poll;
-
+        *control_flow = if cfg!(feature = "metal-auto-capture") {
+            ControlFlow::Exit
+        } else {
+            ControlFlow::Poll
+        };
         match event {
             Event::WindowEvent {
                 event: WindowEvent::Resized(_),
@@ -174,12 +121,10 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,
                     height: size.height as u32,
-                    present_mode: wgpu::PresentMode::Fifo,
+                    present_mode: wgpu::PresentMode::Mailbox,
                 };
 
                 surface.configure(&device, &surface_desc);
-
-                (config.on_resize)(&size, &mut state, hidpi_factor);
             }
             Event::WindowEvent {
                 event:
@@ -200,9 +145,9 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
             } => {
                 *control_flow = ControlFlow::Exit;
             }
-
             Event::MainEventsCleared => window.request_redraw(),
             Event::RedrawEventsCleared => {
+                let delta_s = last_frame.elapsed();
                 let now = Instant::now();
                 imgui.io_mut().update_delta_time(now - last_frame);
                 last_frame = now;
@@ -219,7 +164,31 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
                     .expect("Failed to prepare frame");
                 let ui = imgui.frame();
 
-                render_ui(&ui, &mut state);
+                {
+                    let window = imgui::Window::new("Hello world");
+                    window
+                        .size([300.0, 100.0], Condition::FirstUseEver)
+                        .build(&ui, || {
+                            ui.text("Hello world!");
+                            ui.text("This...is...imgui-rs on WGPU!");
+                            ui.separator();
+                            let mouse_pos = ui.io().mouse_pos;
+                            ui.text(format!(
+                                "Mouse Position: ({:.1},{:.1})",
+                                mouse_pos[0], mouse_pos[1]
+                            ));
+                        });
+
+                    let window = imgui::Window::new("Hello too");
+                    window
+                        .size([400.0, 200.0], Condition::FirstUseEver)
+                        .position([400.0, 200.0], Condition::FirstUseEver)
+                        .build(&ui, || {
+                            ui.text(format!("Frametime: {:?}", delta_s));
+                        });
+
+                    ui.show_demo_window(&mut demo_open);
+                }
 
                 let mut encoder: wgpu::CommandEncoder =
                     device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
@@ -239,7 +208,7 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
                         view: &view,
                         resolve_target: None,
                         ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(config.background_color),
+                            load: wgpu::LoadOp::Clear(clear_color),
                             store: true,
                         },
                     }],
@@ -253,9 +222,6 @@ pub fn run<YourState: 'static, UiFunction: 'static + Fn(&imgui::Ui, &mut YourSta
                 drop(rpass);
 
                 queue.submit(Some(encoder.finish()));
-            }
-            Event::WindowEvent { ref event, .. } => {
-                (config.on_event)(event, &mut state);
             }
             _ => (),
         }
