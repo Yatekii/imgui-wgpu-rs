@@ -11,7 +11,7 @@ Draw dear imgui UIs as a wgpu render pass. Based on [imgui-gfx-renderer](https:/
 
 # Usage
 
-For usage, please have a look at the [example](examples/hello_world.rs).
+For usage, please have a look at the [example](examples/hello-world.rs).
 
 # Example
 
