@@ -16,6 +16,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 #### Table of Contents
 
 - [Unreleased](#unreleased)
+- [v0.17.2](#v0172)
 - [v0.17.1](#v0171)
 - [v0.17.0](#v0170)
 - [v0.16.0](#v0160)
@@ -28,6 +29,10 @@ Per Keep a Changelog there are 6 main categories of changes:
 - [Diffs](#diffs)
 
 ## Unreleased
+
+## v0.17.2
+
+Released 2021-10-08
 
 #### Updated
 - updated wgpu dependency to `>=0.10,<0.12`
@@ -137,7 +142,8 @@ Released 2020-11-21
 
 ## Diffs
 
-- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.1...HEAD)
+- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.2...HEAD)
+- [v0.17.2](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.1...v0.17.2)
 - [v0.17.1](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.0...v0.17.1)
 - [v0.17.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.16.0...v0.17.0)
 - [v0.16.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.15.1...v0.16.0)
