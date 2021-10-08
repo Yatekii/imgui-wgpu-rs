@@ -25,6 +25,7 @@ skip = [
 vulnerability = "deny"
 unmaintained = "deny"
 ignore = [
+    "RUSTSEC-2021-0119"
 ]
 
 [sources]

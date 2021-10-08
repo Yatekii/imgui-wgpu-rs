@@ -48,10 +48,10 @@ min = 0  # allow non-first increment
 
 [dependencies]
 bytemuck = "1"
-imgui = ">=0.1, <0.9"
+imgui = "0.8"
 log = "0.4"
 smallvec = "1"
-wgpu = ">=0.10, <0.12"
+wgpu = "0.11"
 
 [dev-dependencies]
 bytemuck = { version = "1.4", features = ["derive"] }
