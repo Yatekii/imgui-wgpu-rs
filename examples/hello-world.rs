@@ -200,7 +200,6 @@ fn main() {
                 }
 
                 let view = frame
-                    .output
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -224,7 +223,7 @@ fn main() {
 
                 queue.submit(Some(encoder.finish()));
 
-                frame.submit();
+                frame.present();
             }
             _ => (),
         }
