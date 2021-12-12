@@ -5,7 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to cargo's version of [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+Per Keep a Changelog there are 6 main categories of changes:
+- Added
+- Changed
+- Deprecated
+- Removed
+- Fixed
+- Security
+
+#### Table of Contents
+
 - [Unreleased](#unreleased)
+- [v0.18.0](#v0180)
+- [v0.17.2](#v0172)
+- [v0.17.1](#v0171)
+- [v0.17.0](#v0170)
+- [v0.16.0](#v0160)
 - [v0.15.1](#v0151)
 - [v0.15.0](#v0150)
 - [v0.14.0](#v0140)
@@ -15,6 +30,61 @@ and this project adheres to cargo's version of [Semantic Versioning](https://sem
 - [Diffs](#diffs)
 
 ## Unreleased
+
+## v0.18.0
+
+Released 2021-10-08
+
+## v0.17.2
+
+Released 2021-10-08
+
+#### Updated
+- updated wgpu dependency to `>=0.10,<0.12`
+
+## v0.17.1
+
+Released 2021-09-22
+
+#### Updated
+- updated imgui dependency to `>=0.1,<0.9`
+
+#### Removed
+- unstable simple-api is now it's own, unpublished, crate.
+
+## v0.17.0
+
+Released 2021-09-04
+
+#### Changed
+- Internal: translate shaders from SPIR-V to WGSL
+
+#### Updated
+- updated `wgpu` to 0.10
+
+#### Fixed
+- Internal: fix all warnings from static analysis (clippy).
+- Internal: Do not render draw commands that fall outside the framebuffer
+- Internal: Avoid wgpu logic error by not rendering empty clip rects
+
+## v0.16.0
+
+Released 2021-07-14
+
+#### Added
+- Internal: Vastly improved CI and release process.
+- Internal: PR and Issue Templates
+
+#### Changed
+- Examples: Use `env_logger` instead of `wgpu-subscriber`
+- Examples: Use `pollster` as block_on provider instead of `futures`
+
+#### Fixed
+- Rendering to multi-sampled images no longer errors.
+- Examples: Simple API examples now properly depend on that feature existing.
+
+#### Updated
+- updated `wgpu` to 0.9
 
 ## v0.15.1
 
@@ -77,7 +147,12 @@ Released 2020-11-21
 
 ## Diffs
 
-- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.15.1...HEAD)
+- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.18.0...HEAD)
+- [v0.18.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.2...v0.18.0)
+- [v0.17.2](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.1...v0.17.2)
+- [v0.17.1](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.0...v0.17.1)
+- [v0.17.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.16.0...v0.17.0)
+- [v0.16.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.15.1...v0.16.0)
 - [v0.15.1](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.15.0...v0.15.1)
 - [v0.15.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.14.0...v0.15.0)
 - [v0.14.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.13.1...v0.14.0)

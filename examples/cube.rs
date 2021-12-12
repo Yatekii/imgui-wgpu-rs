@@ -1,10 +1,9 @@
 use bytemuck::{Pod, Zeroable};
-use futures::executor::block_on;
 use imgui::*;
 use imgui_wgpu::{Renderer, RendererConfig, Texture, TextureConfig};
-use std::num::NonZeroU32;
+use pollster::block_on;
 use std::time::Instant;
-use wgpu::{util::DeviceExt, BlendState, Extent3d};
+use wgpu::{include_wgsl, util::DeviceExt, Extent3d};
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -12,12 +11,11 @@ use winit::{
     window::Window,
 };
 
-// Example code modified from https://github.com/gfx-rs/wgpu-rs/tree/master/examples/cube
-
 const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 1.0,
 );
 
+// Example code modified from https://github.com/gfx-rs/wgpu-rs/tree/master/examples/cube
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct Vertex {
@@ -79,10 +77,8 @@ fn create_vertices() -> (Vec<Vertex>, Vec<u16>) {
 }
 
 fn create_texels(size: usize) -> Vec<u8> {
-    use std::iter;
-
     (0..size * size)
-        .flat_map(|id| {
+        .map(|id| {
             // get high five for recognizing this ;)
             let cx = 3.0 * (id % size) as f32 / (size - 1) as f32 - 2.0;
             let cy = 2.0 * (id / size) as f32 / (size - 1) as f32 - 1.0;
@@ -93,10 +89,7 @@ fn create_texels(size: usize) -> Vec<u8> {
                 y = 2.0 * old_x * y + cy;
                 count += 1;
             }
-            iter::once(0xFF - (count * 5) as u8)
-                .chain(iter::once(0xFF - (count * 15) as u8))
-                .chain(iter::once(0xFF - (count * 50) as u8))
-                .chain(iter::once(1))
+            count
         })
         .collect()
 }
@@ -112,10 +105,10 @@ struct Example {
 }
 
 impl Example {
-    fn generate_matrix(aspect_ratio: f32, theta: f32) -> cgmath::Matrix4<f32> {
+    fn generate_matrix(aspect_ratio: f32) -> cgmath::Matrix4<f32> {
         let mx_projection = cgmath::perspective(cgmath::Deg(45f32), aspect_ratio, 1.0, 10.0);
-        let mx_view = cgmath::Matrix4::look_at(
-            cgmath::Point3::new(6.0 * theta.cos(), 6.0 * theta.sin(), 3.0),
+        let mx_view = cgmath::Matrix4::look_at_rh(
+            cgmath::Point3::new(1.5f32, -5.0, 3.0),
             cgmath::Point3::new(0f32, 0.0, 0.0),
             cgmath::Vector3::unit_z(),
         );
@@ -126,7 +119,7 @@ impl Example {
 
 impl Example {
     fn init(
-        sc_desc: &wgpu::SwapChainDescriptor,
+        config: &wgpu::SurfaceConfiguration,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> Self {
@@ -139,13 +132,13 @@ impl Example {
         let vertex_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(&vertex_data),
-            usage: wgpu::BufferUsage::VERTEX,
+            usage: wgpu::BufferUsages::VERTEX,
         });
 
         let index_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Index Buffer"),
             contents: bytemuck::cast_slice(&index_data),
-            usage: wgpu::BufferUsage::INDEX,
+            usage: wgpu::BufferUsages::INDEX,
         });
 
         // Create pipeline layout
@@ -154,7 +147,7 @@ impl Example {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStage::VERTEX,
+                    visibility: wgpu::ShaderStages::VERTEX,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -164,20 +157,11 @@ impl Example {
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Texture {
                         multisampled: false,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        sample_type: wgpu::TextureSampleType::Uint,
                         view_dimension: wgpu::TextureViewDimension::D2,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler {
-                        filtering: true,
-                        comparison: false,
                     },
                     count: None,
                 },
@@ -203,41 +187,28 @@ impl Example {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+            format: wgpu::TextureFormat::R8Uint,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         });
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         queue.write_texture(
-            wgpu::ImageCopyTexture {
-                texture: &texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-            },
+            texture.as_image_copy(),
             &texels,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: NonZeroU32::new(4 * size),
+                bytes_per_row: Some(std::num::NonZeroU32::new(size).unwrap()),
                 rows_per_image: None,
             },
             texture_extent,
         );
 
         // Create other resources
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Nearest,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
-        let mx_total = Self::generate_matrix(sc_desc.width as f32 / sc_desc.height as f32, 0.0);
+        let mx_total = Self::generate_matrix(config.width as f32 / config.height as f32);
         let mx_ref: &[f32; 16] = mx_total.as_ref();
         let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Uniform Buffer"),
             contents: bytemuck::cast_slice(mx_ref),
-            usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
         // Create bind group
@@ -252,62 +223,48 @@ impl Example {
                     binding: 1,
                     resource: wgpu::BindingResource::TextureView(&texture_view),
                 },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
-                },
             ],
             label: None,
         });
 
-        // Create the render pipeline
-        let vs_module =
-            device.create_shader_module(&wgpu::include_spirv!("../resources/cube.vert.spv"));
-        let fs_module =
-            device.create_shader_module(&wgpu::include_spirv!("../resources/cube.frag.spv"));
+        let shader = device.create_shader_module(&include_wgsl!("../resources/cube.wgsl"));
+
+        let vertex_buffers = [wgpu::VertexBufferLayout {
+            array_stride: vertex_size as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x4,
+                    offset: 0,
+                    shader_location: 0,
+                },
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x2,
+                    offset: 4 * 4,
+                    shader_location: 1,
+                },
+            ],
+        }];
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &vs_module,
-                entry_point: "main",
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: vertex_size as wgpu::BufferAddress,
-                    step_mode: wgpu::InputStepMode::Vertex,
-                    attributes: &[
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 4 * 4,
-                            shader_location: 1,
-                        },
-                    ],
-                }],
+                module: &shader,
+                entry_point: "vs_main",
+                buffers: &vertex_buffers,
             },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: "fs_main",
+                targets: &[config.format.into()],
+            }),
             primitive: wgpu::PrimitiveState {
-                front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
                 ..Default::default()
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &fs_module,
-                entry_point: "main",
-                targets: &[wgpu::ColorTargetState {
-                    format: sc_desc.format,
-                    blend: Some(BlendState {
-                        color: wgpu::BlendComponent::REPLACE,
-                        alpha: wgpu::BlendComponent::REPLACE,
-                    }),
-                    write_mask: wgpu::ColorWrite::ALL,
-                }],
-            }),
         });
 
         // Done
@@ -327,7 +284,7 @@ impl Example {
     }
 
     fn setup_camera(&mut self, queue: &wgpu::Queue, size: [f32; 2]) {
-        let mx_total = Self::generate_matrix(size[0] / size[1], self.time * 0.1);
+        let mx_total = Self::generate_matrix(size[0] / size[1]);
         let mx_ref: &[f32; 16] = mx_total.as_ref();
         queue.write_buffer(&self.uniform_buf, 0, bytemuck::cast_slice(mx_ref));
     }
@@ -339,14 +296,14 @@ impl Example {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
                 color_attachments: &[wgpu::RenderPassColorAttachment {
-                    view: &view,
+                    view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
                             r: 0.1,
                             g: 0.2,
                             b: 0.3,
-                            a: 0.1, // semi-transparent background
+                            a: 1.0,
                         }),
                         store: true,
                     },
@@ -368,12 +325,12 @@ impl Example {
 }
 
 fn main() {
-    wgpu_subscriber::initialize_default_subscriber(None);
+    env_logger::init();
 
     // Set up window and GPU
     let event_loop = EventLoop::new();
 
-    let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
+    let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
 
     let (window, size, surface) = {
         let version = env!("CARGO_PKG_VERSION");
@@ -396,29 +353,23 @@ fn main() {
     let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::HighPerformance,
         compatible_surface: Some(&surface),
+        force_fallback_adapter: false,
     }))
     .unwrap();
 
-    let (device, queue) = block_on(adapter.request_device(
-        &wgpu::DeviceDescriptor {
-            label: None,
-            features: wgpu::Features::empty(),
-            limits: wgpu::Limits::default(),
-        },
-        None,
-    ))
-    .unwrap();
+    let (device, queue) =
+        block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None)).unwrap();
 
     // Set up swap chain
-    let sc_desc = wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+    let surface_desc = wgpu::SurfaceConfiguration {
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
         height: size.height as u32,
         present_mode: wgpu::PresentMode::Mailbox,
     };
 
-    let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+    surface.configure(&device, &surface_desc);
 
     // Set up dear imgui
     let mut imgui = imgui::Context::create();
@@ -453,7 +404,7 @@ fn main() {
     // };
 
     let renderer_config = RendererConfig {
-        texture_format: sc_desc.format,
+        texture_format: surface_desc.format,
         ..Default::default()
     };
 
@@ -464,7 +415,7 @@ fn main() {
     let mut last_cursor = None;
 
     let mut example_size: [f32; 2] = [640.0, 480.0];
-    let mut example = Example::init(&sc_desc, &device, &queue);
+    let mut example = Example::init(&surface_desc, &device, &queue);
 
     // Stores a texture for displaying with imgui::Image(),
     // also as a texture view for rendering into it
@@ -475,7 +426,7 @@ fn main() {
             height: example_size[1] as u32,
             ..Default::default()
         },
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT | wgpu::TextureUsage::SAMPLED,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
         ..Default::default()
     };
 
@@ -496,15 +447,15 @@ fn main() {
             } => {
                 let size = window.inner_size();
 
-                let sc_desc = wgpu::SwapChainDescriptor {
-                    usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+                let surface_desc = wgpu::SurfaceConfiguration {
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,
                     height: size.height as u32,
                     present_mode: wgpu::PresentMode::Mailbox,
                 };
 
-                swap_chain = device.create_swap_chain(&surface, &sc_desc);
+                surface.configure(&device, &surface_desc);
             }
             Event::WindowEvent {
                 event:
@@ -531,7 +482,7 @@ fn main() {
                 imgui.io_mut().update_delta_time(now - last_frame);
                 last_frame = now;
 
-                let frame = match swap_chain.get_current_frame() {
+                let frame = match surface.get_current_texture() {
                     Ok(frame) => frame,
                     Err(e) => {
                         eprintln!("dropped frame: {:?}", e);
@@ -543,15 +494,19 @@ fn main() {
                     .expect("Failed to prepare frame");
                 let ui = imgui.frame();
 
+                let view = frame
+                    .texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
+
                 // Render example normally at background
                 example.update(ui.io().delta_time);
                 example.setup_camera(&queue, ui.io().display_size);
-                example.render(&frame.output.view, &device, &queue);
+                example.render(&view, &device, &queue);
 
                 // Store the new size of Image() or None to indicate that the window is collapsed.
                 let mut new_example_size: Option<[f32; 2]> = None;
 
-                imgui::Window::new(im_str!("Cube"))
+                imgui::Window::new("Cube")
                     .size([512.0, 512.0], Condition::FirstUseEver)
                     .build(&ui, || {
                         new_example_size = Some(ui.content_region_avail());
@@ -569,8 +524,8 @@ fn main() {
                                 height: (example_size[1] * scale[1]) as u32,
                                 ..Default::default()
                             },
-                            usage: wgpu::TextureUsage::RENDER_ATTACHMENT
-                                | wgpu::TextureUsage::SAMPLED,
+                            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                                | wgpu::TextureUsages::TEXTURE_BINDING,
                             ..Default::default()
                         };
                         renderer.textures.replace(
@@ -599,7 +554,7 @@ fn main() {
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
                     color_attachments: &[wgpu::RenderPassColorAttachment {
-                        view: &frame.output.view,
+                        view: &view,
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Load, // Do not clear
@@ -617,6 +572,7 @@ fn main() {
                 drop(rpass);
 
                 queue.submit(Some(encoder.finish()));
+                frame.present();
             }
             _ => (),
         }

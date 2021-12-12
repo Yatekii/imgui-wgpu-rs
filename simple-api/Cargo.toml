@@ -1,0 +1,25 @@
+[package]
+name = "imgui-wgpu-simple"
+version = "0.1.0"
+authors = ["Noah Hüsser <yatekii@yatekii.ch>", "Connor Fitzgerald <connorwadefitzgerald@gmail.com>", "Steven Wittens <steven@acko.net>"]
+edition = "2018"
+description = "A simple api for imgui-rs."
+documentation = "https://docs.rs/imgui-wgpu/"
+homepage = "https://github.com/Yatekii/imgui-wgpu-rs"
+repository = "https://github.com/Yatekii/imgui-wgpu-rs"
+readme = "README.md"
+categories = ["gui", "graphics", "rendering", "rendering::graphics-api"]
+keywords = ["gui", "graphics", "wgpu", "imgui"]
+license = "MIT OR Apache-2.0"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+imgui = "0.8"
+imgui-wgpu = { path = ".." }
+imgui-winit-support = "0.8"
+pollster = "0.2" # for block_on executor
+winit = "0.25"
+wgpu = "0.11"
+

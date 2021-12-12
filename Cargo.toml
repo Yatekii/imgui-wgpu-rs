@@ -1,6 +1,11 @@
+[workspace]
+members = [".", "simple-api"]
+default-members = [".", "simple-api"]
+resolver = "2"
+
 [package]
 name = "imgui-wgpu"
-version = "0.15.1"
+version = "0.18.0"
 authors = ["Noah Hüsser <yatekii@yatekii.ch>", "Connor Fitzgerald <connorwadefitzgerald@gmail.com>", "Steven Wittens <steven@acko.net>"]
 edition = "2018"
 description = "A wgpu render backend for imgui-rs."
@@ -15,36 +20,48 @@ license = "MIT OR Apache-2.0"
 exclude = [
 	".gitignore",
 	".github",
-	"examples",
 	"resources",
 ]
 
-[features]
-# used in src/simple_api.rs
-default = []
-simple_api_unstable = [ "winit", "pollster", "imgui-winit-support" ]
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "\\[Unreleased\\]\\(#unreleased\\)"
+replace = "[Unreleased](#unreleased)\n- [v{{version}}](#v{{version}})"
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "\\[v([0-9]+)\\.([0-9]+)\\.([0-9]+)\\]\\(#v[0-9\\.]+\\)"
+replace = "[v$1.$2.$3](#v$1$2$3)"
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "## Unreleased"
+replace = "## Unreleased\n\n## v{{version}}\n\nReleased {{date}}"
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "\\[Unreleased\\]\\(https://github.com/Yatekii/imgui-wgpu-rs/compare/v([a-z0-9.-]+)\\.\\.\\.HEAD\\)"
+replace = "[Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v{{version}}...HEAD)\n- [v{{version}}](https://github.com/Yatekii/imgui-wgpu-rs/compare/v$1...v{{version}})"
+min = 0  # allow first increment
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "<!-- Begin Diffs -->"
+replace = "- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v{{version}}...HEAD)"
+min = 0  # allow non-first increment
 
 [dependencies]
 bytemuck = "1"
-imgui = "0.7"
+imgui = "0.8"
 log = "0.4"
 smallvec = "1"
-wgpu = "0.8.1"
-
-# deps for simple_api_unstable
-imgui-winit-support = { version = "0.7", optional = true }
-pollster = { version = "0.2.0", optional = true } # for block_on executor
-winit = { version = ">= 0.23, < 0.25", optional = true }
+wgpu = "0.11"
 
 [dev-dependencies]
 bytemuck = { version = "1.4", features = ["derive"] }
 cgmath = "0.18"
-futures = "0.3"
-image = "0.23"
-imgui-winit-support = "0.7"
+env_logger = "0.9"
+image = { version = "0.23", default-features = false, features = ["jpeg"] }
+imgui-winit-support = "0.8"
+pollster = "0.2"
 raw-window-handle = "0.3"
-wgpu-subscriber = "0.1"
-winit = "0.24"
+winit = "0.25"
 
 [package.metadata.docs.rs]
 all-features = true

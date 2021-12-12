@@ -8,10 +8,11 @@ use std::{error::Error, num::NonZeroU32};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
-pub type RendererResult<T> = Result<T, RendererError>;
+static VS_ENTRY_POINT: &str = "vs_main";
+static FS_ENTRY_POINT_LINEAR: &str = "fs_main_linear";
+static FS_ENTRY_POINT_SRGB: &str = "fs_main_srgb";
 
-#[cfg(feature = "simple_api_unstable")]
-pub mod simple_api;
+pub type RendererResult<T> = Result<T, RendererError>;
 
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone)]
@@ -57,7 +58,7 @@ pub struct TextureConfig<'a> {
     /// The format of the texture, if not set uses the format from the renderer.
     pub format: Option<TextureFormat>,
     /// The usage of the texture.
-    pub usage: TextureUsage,
+    pub usage: TextureUsages,
     /// The mip level of the texture.
     pub mip_level_count: u32,
     /// The sample count of the texture.
@@ -77,7 +78,7 @@ impl<'a> Default for TextureConfig<'a> {
             },
             label: None,
             format: None,
-            usage: TextureUsage::SAMPLED | TextureUsage::COPY_DST,
+            usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
@@ -177,6 +178,7 @@ impl Texture {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: Origin3d { x: 0, y: 0, z: 0 },
+                aspect: TextureAspect::All,
             },
             // source bitmap data
             data,
@@ -227,31 +229,30 @@ impl Texture {
 }
 
 /// Configuration for the renderer.
-pub struct RendererConfig<'vs, 'fs> {
+pub struct RendererConfig<'s> {
     pub texture_format: TextureFormat,
     pub depth_format: Option<TextureFormat>,
     pub sample_count: u32,
-    pub vertex_shader: Option<ShaderModuleDescriptor<'vs>>,
-    pub fragment_shader: Option<ShaderModuleDescriptor<'fs>>,
+    pub shader: Option<ShaderModuleDescriptor<'s>>,
+    pub vertex_shader_entry_point: Option<&'s str>,
+    pub fragment_shader_entry_point: Option<&'s str>,
 }
 
-impl RendererConfig<'_, '_> {
+impl<'s> RendererConfig<'s> {
     /// Create a new renderer config with custom shaders.
-    pub fn with_shaders<'vs, 'fs>(
-        vertex_shader: ShaderModuleDescriptor<'vs>,
-        fragment_shader: ShaderModuleDescriptor<'fs>,
-    ) -> RendererConfig<'vs, 'fs> {
+    pub fn with_shaders(shader: ShaderModuleDescriptor<'s>) -> Self {
         RendererConfig {
             texture_format: TextureFormat::Rgba8Unorm,
             depth_format: None,
             sample_count: 1,
-            vertex_shader: Some(vertex_shader),
-            fragment_shader: Some(fragment_shader),
+            shader: Some(shader),
+            vertex_shader_entry_point: Some(VS_ENTRY_POINT),
+            fragment_shader_entry_point: Some(FS_ENTRY_POINT_LINEAR),
         }
     }
 }
 
-impl Default for RendererConfig<'_, '_> {
+impl Default for RendererConfig<'_> {
     /// Create a new renderer config with precompiled default shaders outputting linear color.
     ///
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
@@ -260,29 +261,30 @@ impl Default for RendererConfig<'_, '_> {
     }
 }
 
-impl RendererConfig<'_, '_> {
+impl RendererConfig<'_> {
     /// Create a new renderer config with precompiled default shaders outputting linear color.
     ///
     /// If you write to a Bgra8UnormSrgb framebuffer, this is what you want.
     pub fn new() -> Self {
-        Self::with_shaders(
-            include_spirv!("imgui.vert.spv"),
-            include_spirv!("imgui-linear.frag.spv"),
-        )
+        RendererConfig {
+            fragment_shader_entry_point: Some(FS_ENTRY_POINT_LINEAR),
+            ..Self::with_shaders(include_wgsl!("imgui.wgsl"))
+        }
     }
 
     /// Create a new renderer config with precompiled default shaders outputting srgb color.
     ///
     /// If you write to a Bgra8Unorm framebuffer, this is what you want.
     pub fn new_srgb() -> Self {
-        Self::with_shaders(
-            include_spirv!("imgui.vert.spv"),
-            include_spirv!("imgui-srgb.frag.spv"),
-        )
+        RendererConfig {
+            fragment_shader_entry_point: Some(FS_ENTRY_POINT_SRGB),
+            ..Self::with_shaders(include_wgsl!("imgui.wgsl"))
+        }
     }
 }
 
 pub struct RenderData {
+    fb_size: [f32; 2],
     last_size: [f32; 2],
     last_pos: [f32; 2],
     vertex_buffer: Option<Buffer>,
@@ -301,7 +303,7 @@ pub struct Renderer {
     pub textures: Textures<Texture>,
     texture_layout: BindGroupLayout,
     render_data: Option<RenderData>,
-    config: RendererConfig<'static, 'static>,
+    config: RendererConfig<'static>,
 }
 
 impl Renderer {
@@ -316,20 +318,20 @@ impl Renderer {
             texture_format,
             depth_format,
             sample_count,
-            vertex_shader,
-            fragment_shader,
+            shader,
+            vertex_shader_entry_point,
+            fragment_shader_entry_point,
         } = config;
 
         // Load shaders.
-        let vs_module = device.create_shader_module(&vertex_shader.unwrap());
-        let fs_module = device.create_shader_module(&fragment_shader.unwrap());
+        let shader_module = device.create_shader_module(&shader.unwrap());
 
         // Create the uniform matrix buffer.
         let size = 64;
         let uniform_buffer = device.create_buffer(&BufferDescriptor {
             label: Some("imgui-wgpu uniform buffer"),
             size,
-            usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
@@ -338,7 +340,7 @@ impl Renderer {
             label: None,
             entries: &[BindGroupLayoutEntry {
                 binding: 0,
-                visibility: wgpu::ShaderStage::VERTEX,
+                visibility: wgpu::ShaderStages::VERTEX,
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
                     has_dynamic_offset: false,
@@ -364,7 +366,7 @@ impl Renderer {
             entries: &[
                 BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: BindingType::Texture {
                         multisampled: false,
                         sample_type: TextureSampleType::Float { filterable: true },
@@ -374,7 +376,7 @@ impl Renderer {
                 },
                 BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: BindingType::Sampler {
                         comparison: false,
                         filtering: true,
@@ -397,11 +399,11 @@ impl Renderer {
             label: Some("imgui-wgpu pipeline"),
             layout: Some(&pipeline_layout),
             vertex: VertexState {
-                module: &vs_module,
-                entry_point: "main",
+                module: &shader_module,
+                entry_point: vertex_shader_entry_point.unwrap(),
                 buffers: &[VertexBufferLayout {
                     array_stride: size_of::<DrawVert>() as BufferAddress,
-                    step_mode: InputStepMode::Vertex,
+                    step_mode: VertexStepMode::Vertex,
                     attributes: &vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Unorm8x4],
                 }],
             },
@@ -423,12 +425,11 @@ impl Renderer {
             }),
             multisample: MultisampleState {
                 count: sample_count,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
+                ..Default::default()
             },
             fragment: Some(FragmentState {
-                module: &fs_module,
-                entry_point: "main",
+                module: &shader_module,
+                entry_point: fragment_shader_entry_point.unwrap(),
                 targets: &[ColorTargetState {
                     format: texture_format,
                     blend: Some(BlendState {
@@ -443,7 +444,7 @@ impl Renderer {
                             operation: BlendOperation::Add,
                         },
                     }),
-                    write_mask: ColorWrite::ALL,
+                    write_mask: ColorWrites::ALL,
                 }],
             }),
         });
@@ -459,8 +460,9 @@ impl Renderer {
                 texture_format,
                 depth_format,
                 sample_count,
-                vertex_shader: None,
-                fragment_shader: None,
+                shader: None,
+                vertex_shader_entry_point: None,
+                fragment_shader_entry_point: None,
             },
         };
 
@@ -484,6 +486,7 @@ impl Renderer {
         let fb_height = draw_data.display_size[1] * draw_data.framebuffer_scale[1];
 
         let mut render_data = render_data.unwrap_or_else(|| RenderData {
+            fb_size: [fb_width, fb_height],
             last_size: [0.0, 0.0],
             last_pos: [0.0, 0.0],
             vertex_buffer: None,
@@ -562,7 +565,7 @@ impl Renderer {
             let buffer = device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("imgui-wgpu index buffer"),
                 contents: &indices,
-                usage: BufferUsage::INDEX | BufferUsage::COPY_DST,
+                usage: BufferUsages::INDEX | BufferUsages::COPY_DST,
             });
             render_data.index_buffer = Some(buffer);
             render_data.index_buffer_size = indices.len();
@@ -578,7 +581,7 @@ impl Renderer {
             let buffer = device.create_buffer_init(&BufferInitDescriptor {
                 label: Some("imgui-wgpu vertex buffer"),
                 contents: &vertices,
-                usage: BufferUsage::VERTEX | BufferUsage::COPY_DST,
+                usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
             });
             render_data.vertex_buffer = Some(buffer);
             render_data.vertex_buffer_size = vertices.len();
@@ -620,7 +623,8 @@ impl Renderer {
         {
             self.render_draw_list(
                 rpass,
-                &draw_list,
+                draw_list,
+                render_data.fb_size,
                 draw_data.display_pos,
                 draw_data.framebuffer_scale,
                 *index_base,
@@ -649,6 +653,7 @@ impl Renderer {
         &'render self,
         rpass: &mut RenderPass<'render>,
         draw_list: &DrawList,
+        fb_size: [f32; 2],
         clip_off: [f32; 2],
         clip_scale: [f32; 2],
         index_base: u32,
@@ -674,17 +679,34 @@ impl Renderer {
                 rpass.set_bind_group(1, &tex.bind_group, &[]);
 
                 // Set scissors on the renderpass.
-                let scissors = (
-                    clip_rect[0].max(0.0).floor() as u32,
-                    clip_rect[1].max(0.0).floor() as u32,
-                    (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
-                    (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
-                );
-                rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
-
-                // Draw the current batch of vertices with the renderpass.
                 let end = start + count as u32;
-                rpass.draw_indexed(start..end, vertex_base, 0..1);
+                if clip_rect[0] < fb_size[0]
+                    && clip_rect[1] < fb_size[1]
+                    && clip_rect[2] >= 0.0
+                    && clip_rect[3] >= 0.0
+                {
+                    let scissors = (
+                        clip_rect[0].max(0.0).floor() as u32,
+                        clip_rect[1].max(0.0).floor() as u32,
+                        (clip_rect[2] - clip_rect[0]).abs().ceil() as u32,
+                        (clip_rect[3] - clip_rect[1]).abs().ceil() as u32,
+                    );
+
+                    // XXX: Work-around for wgpu issue [1] by only issuing draw
+                    // calls if the scissor rect is valid (by wgpu's flawed
+                    // logic). Regardless, a zero-width or zero-height scissor
+                    // is essentially a no-op render anyway, so just skip it.
+                    // [1]: https://github.com/gfx-rs/wgpu/issues/1750
+                    if scissors.2 > 0 && scissors.3 > 0 {
+                        rpass.set_scissor_rect(scissors.0, scissors.1, scissors.2, scissors.3);
+
+                        // Draw the current batch of vertices with the renderpass.
+                        rpass.draw_indexed(start..end, vertex_base, 0..1);
+                    }
+                }
+
+                // Increment the index regardless of whether or not this batch
+                // of vertices was drawn.
                 start = end;
             }
         }
@@ -718,7 +740,7 @@ impl Renderer {
         };
 
         let font_texture = Texture::new(device, self, font_texture_cnfig);
-        font_texture.write(&queue, handle.data, handle.width, handle.height);
+        font_texture.write(queue, handle.data, handle.width, handle.height);
         fonts.tex_id = self.textures.insert(font_texture);
         // Clear imgui texture data to save memory.
         fonts.clear_tex_data();
