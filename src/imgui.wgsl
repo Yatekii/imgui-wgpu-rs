@@ -1,4 +1,3 @@
-[[block]]
 struct Uniforms {
     u_Matrix: mat4x4<f32>;
 };
