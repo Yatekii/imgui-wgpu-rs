@@ -21,5 +21,5 @@ imgui-wgpu = { path = ".." }
 imgui-winit-support = "0.8"
 pollster = "0.2" # for block_on executor
 winit = "0.25"
-wgpu = "0.11"
+wgpu = "0.12"
 

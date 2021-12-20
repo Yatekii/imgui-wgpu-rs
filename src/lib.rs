@@ -377,10 +377,7 @@ impl Renderer {
                 BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: BindingType::Sampler {
-                        comparison: false,
-                        filtering: true,
-                    },
+                    ty: BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                     count: None,
                 },
             ],
@@ -413,7 +410,7 @@ impl Renderer {
                 front_face: FrontFace::Cw,
                 cull_mode: None,
                 polygon_mode: PolygonMode::Fill,
-                clamp_depth: false,
+                unclipped_depth: false,
                 conservative: false,
             },
             depth_stencil: depth_format.map(|format| wgpu::DepthStencilState {
@@ -447,6 +444,7 @@ impl Renderer {
                     write_mask: ColorWrites::ALL,
                 }],
             }),
+            multiview: None,
         });
 
         let mut renderer = Self {
