@@ -547,8 +547,8 @@ impl Renderer {
         for draw_list in draw_data.draw_lists() {
             // Safety: DrawVertPod is #[repr(transparent)] over DrawVert and DrawVert _should_ be Pod.
             let vertices_pod: &[DrawVertPod] = unsafe { draw_list.transmute_vtx_buffer() };
-            vertices.extend_from_slice(bytemuck::cast_slice(&vertices_pod));
-            indices.extend_from_slice(bytemuck::cast_slice(&draw_list.idx_buffer()));
+            vertices.extend_from_slice(bytemuck::cast_slice(vertices_pod));
+            indices.extend_from_slice(bytemuck::cast_slice(draw_list.idx_buffer()));
         }
 
         // Copies in wgpu must be padded to 4 byte alignment
