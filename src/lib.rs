@@ -615,7 +615,7 @@ impl Renderer {
         );
 
         // Execute all the imgui render work.
-        for (draw_list, (vertex_base, index_base)) in draw_data
+        for (draw_list, bases) in draw_data
             .draw_lists()
             .zip(render_data.draw_list_offsets.iter())
         {
@@ -625,8 +625,7 @@ impl Renderer {
                 render_data.fb_size,
                 draw_data.display_pos,
                 draw_data.framebuffer_scale,
-                *index_base,
-                *vertex_base,
+                *bases,
             )?;
         }
 
@@ -654,8 +653,7 @@ impl Renderer {
         fb_size: [f32; 2],
         clip_off: [f32; 2],
         clip_scale: [f32; 2],
-        index_base: u32,
-        vertex_base: i32,
+        (vertex_base, index_base): (i32, u32),
     ) -> RendererResult<()> {
         let mut start = index_base;
 
