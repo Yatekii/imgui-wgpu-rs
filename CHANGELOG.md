@@ -31,6 +31,9 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+### Updated
+- updated wgpu dependency to `0.12`
+
 ## v0.18.0
 
 Released 2021-10-08
