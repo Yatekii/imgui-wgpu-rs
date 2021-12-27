@@ -17,7 +17,7 @@ For usage, please have a look at the [example](examples/hello-world.rs).
 
 Run the example with
 ```
-cargo run --release --example hello_world
+cargo run --release --example hello-world
 ```
 
 # Status
