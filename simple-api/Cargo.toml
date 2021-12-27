@@ -18,8 +18,8 @@ publish = false
 [dependencies]
 imgui = "0.8"
 imgui-wgpu = { path = ".." }
-imgui-winit-support = "0.8"
+imgui-winit-support = { version = "0.8.1", default-features = false, features = ["winit-26"] }
 pollster = "0.2" # for block_on executor
-winit = "0.25"
+winit = "0.26"
 wgpu = "0.12"
 
