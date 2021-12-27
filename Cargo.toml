@@ -1,6 +1,4 @@
 [workspace]
-members = [".", "simple-api"]
-default-members = [".", "simple-api"]
 resolver = "2"
 
 [package]
