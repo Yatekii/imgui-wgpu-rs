@@ -16,6 +16,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 #### Table of Contents
 
 - [Unreleased](#unreleased)
+- [v0.19.0](#v0190)
 - [v0.18.0](#v0180)
 - [v0.17.2](#v0172)
 - [v0.17.1](#v0171)
@@ -30,6 +31,10 @@ Per Keep a Changelog there are 6 main categories of changes:
 - [Diffs](#diffs)
 
 ## Unreleased
+
+## v0.19.0
+
+Released 2021-12-30
 
 ### Changed
 - Split up render into two internal functions, `prepare` and `split_render`.
@@ -157,7 +162,8 @@ Released 2020-11-21
 
 ## Diffs
 
-- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.18.0...HEAD)
+- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.19.0...HEAD)
+- [v0.19.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.18.0...v0.19.0)
 - [v0.18.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.2...v0.18.0)
 - [v0.17.2](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.1...v0.17.2)
 - [v0.17.1](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.0...v0.17.1)
