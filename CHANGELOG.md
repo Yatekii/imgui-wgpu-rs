@@ -31,8 +31,15 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+### Changed
+- Split up render into two internal functions, `prepare` and `split_render`.
+- Add `SamplerDesc` to TextureConfig
+
 ### Updated
 - updated wgpu dependency to `0.12`
+
+### Removed
+- unreleased `simple-api` and moved to https://github.com/benmkw/imgui-wgpu-simple-api
 
 ## v0.18.0
 
