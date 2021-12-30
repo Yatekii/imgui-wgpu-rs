@@ -106,9 +106,9 @@ fn main() {
     let mut last_frame = Instant::now();
 
     // Set up Lenna texture
-    let lenna_bytes = include_bytes!("../resources/Lenna.jpg");
+    let lenna_bytes = include_bytes!("../resources/checker.png");
     let image =
-        image::load_from_memory_with_format(lenna_bytes, ImageFormat::Jpeg).expect("invalid image");
+        image::load_from_memory_with_format(lenna_bytes, ImageFormat::Png).expect("invalid image");
     let image = image.to_bgra8();
     let (width, height) = image.dimensions();
     let raw_data = image.into_raw();
@@ -200,7 +200,7 @@ fn main() {
                         .size([400.0, 600.0], Condition::FirstUseEver)
                         .build(&ui, || {
                             ui.text("Hello textures!");
-                            ui.text("Say hello to Lenna.jpg");
+                            ui.text("Say hello to checker.png");
                             Image::new(lenna_texture_id, size).build(&ui);
                         });
                 }

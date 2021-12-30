@@ -265,6 +265,7 @@ impl Example {
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
+            multiview: None,
         });
 
         // Done
@@ -537,7 +538,7 @@ fn main() {
                     // Only render example to example_texture if thw window is not collapsed
                     example.setup_camera(&queue, size);
                     example.render(
-                        &renderer.textures.get(example_texture_id).unwrap().view(),
+                        renderer.textures.get(example_texture_id).unwrap().view(),
                         &device,
                         &queue,
                     );

@@ -55,7 +55,7 @@ wgpu = "0.12"
 bytemuck = { version = "1.4", features = ["derive"] }
 cgmath = "0.18"
 env_logger = "0.9"
-image = { version = "0.23", default-features = false, features = ["jpeg"] }
+image = { version = "0.23", default-features = false, features = ["png"] }
 imgui-winit-support = { version = "0.8", default-features = false, features = ["winit-26"] }
 pollster = "0.2"
 raw-window-handle = "0.4"
