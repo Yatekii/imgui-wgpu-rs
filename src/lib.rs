@@ -514,6 +514,7 @@ impl Renderer {
             || (render_data.last_pos[0] - draw_data.display_pos[0]).abs() > std::f32::EPSILON
             || (render_data.last_pos[1] - draw_data.display_pos[1]).abs() > std::f32::EPSILON
         {
+            render_data.fb_size = [fb_width, fb_height];
             render_data.last_size = draw_data.display_size;
             render_data.last_pos = draw_data.display_pos;
 
