@@ -32,6 +32,9 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+### Fixed
+- Fix issues with resizing due to the framebuffer size not being updated. @druks-232cc
+
 ## v0.19.0
 
 Released 2021-12-30
