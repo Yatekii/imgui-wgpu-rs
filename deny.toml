@@ -14,14 +14,14 @@ skip = [
     { name = "core-foundation", version = "0.7.0" },
     { name = "core-foundation-sys", version = "0.7.0" },
     { name = "core-graphics", version = "0.19.2" },
+    { name = "hashbrown", version = "0.11.2" },
+    { name = "parking_lot", version = "0.11.2" },
+    { name = "parking_lot_core", version = "0.8.5" },
 ]
 
 [advisories]
 vulnerability = "deny"
 unmaintained = "deny"
-ignore = [
-    "RUSTSEC-2021-0119"
-]
 
 [sources]
 unknown-registry = "deny"
