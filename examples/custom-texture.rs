@@ -54,13 +54,25 @@ fn main() {
     ))
     .unwrap();
 
+    let desired_present_mode = wgpu::PresentMode::Mailbox;
+    let fallback_present_mode = wgpu::PresentMode::Fifo;
+    let present_mode = if surface
+        .get_supported_modes(&adapter)
+        .iter()
+        .any(|present_mode| *present_mode == desired_present_mode)
+    {
+        desired_present_mode
+    } else {
+        fallback_present_mode
+    };
+
     // Set up swap chain
     let surface_desc = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
         width: size.width as u32,
         height: size.height as u32,
-        present_mode: wgpu::PresentMode::Mailbox,
+        present_mode,
     };
 
     surface.configure(&device, &surface_desc);
@@ -149,7 +161,7 @@ fn main() {
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     width: size.width as u32,
                     height: size.height as u32,
-                    present_mode: wgpu::PresentMode::Mailbox,
+                    present_mode,
                 };
 
                 surface.configure(&device, &surface_desc);
@@ -218,14 +230,14 @@ fn main() {
                     .create_view(&wgpu::TextureViewDescriptor::default());
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: None,
-                    color_attachments: &[wgpu::RenderPassColorAttachment {
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                         view: &view,
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(clear_color),
                             store: true,
                         },
-                    }],
+                    })],
                     depth_stencil_attachment: None,
                 });
 
