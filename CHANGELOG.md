@@ -34,7 +34,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ### Updated
 - updated `wgpu` to 0.13 @Davidster
-- Internal: In examples, fall back onto fifo present mode if mailbox isn't supported @Davidster
+- Internal: Use Fifo present mode in examples @Davidster
 
 ### Fixed
 - Fix issues with resizing due to the framebuffer size not being updated. @druks-232cc
