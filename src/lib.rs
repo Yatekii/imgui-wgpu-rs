@@ -329,7 +329,7 @@ impl Renderer {
         } = config;
 
         // Load shaders.
-        let shader_module = device.create_shader_module(&shader.unwrap());
+        let shader_module = device.create_shader_module(shader.unwrap());
 
         // Create the uniform matrix buffer.
         let size = 64;
@@ -432,7 +432,7 @@ impl Renderer {
             fragment: Some(FragmentState {
                 module: &shader_module,
                 entry_point: fragment_shader_entry_point.unwrap(),
-                targets: &[ColorTargetState {
+                targets: &[Some(ColorTargetState {
                     format: texture_format,
                     blend: Some(BlendState {
                         color: BlendComponent {
@@ -447,7 +447,7 @@ impl Renderer {
                         },
                     }),
                     write_mask: ColorWrites::ALL,
-                }],
+                })],
             }),
             multiview: None,
         });
