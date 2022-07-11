@@ -3,7 +3,7 @@ resolver = "2"
 
 [package]
 name = "imgui-wgpu"
-version = "0.19.0"
+version = "0.20.0"
 authors = ["Noah Hüsser <yatekii@yatekii.ch>", "Connor Fitzgerald <connorwadefitzgerald@gmail.com>", "Steven Wittens <steven@acko.net>"]
 edition = "2018"
 description = "A wgpu render backend for imgui-rs."
