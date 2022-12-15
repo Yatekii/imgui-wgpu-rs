@@ -32,6 +32,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 - [Diffs](#diffs)
 
 ## Unreleased
+- Make `Texture::from_raw_parts` take `Arc<T>` instead of `T` to avoid being forced to move into the texture @BeastLe9enD
 
 ## v0.20.0
 
