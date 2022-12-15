@@ -4,6 +4,7 @@ use imgui::{
 use smallvec::SmallVec;
 use std::fmt;
 use std::mem::size_of;
+use std::sync::Arc;
 use std::{error::Error, num::NonZeroU32};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
@@ -106,18 +107,18 @@ impl<'a> Default for TextureConfig<'a> {
 
 /// A container for a bindable texture.
 pub struct Texture {
-    texture: wgpu::Texture,
-    view: wgpu::TextureView,
-    bind_group: BindGroup,
+    texture: Arc<wgpu::Texture>,
+    view: Arc<wgpu::TextureView>,
+    bind_group: Arc<BindGroup>,
     size: Extent3d,
 }
 
 impl Texture {
     /// Create a `Texture` from its raw parts.
     pub fn from_raw_parts(
-        texture: wgpu::Texture,
-        view: wgpu::TextureView,
-        bind_group: BindGroup,
+        texture: Arc<wgpu::Texture>,
+        view: Arc<wgpu::TextureView>,
+        bind_group: Arc<BindGroup>,
         size: Extent3d,
     ) -> Self {
         Self {
@@ -131,7 +132,7 @@ impl Texture {
     /// Create a new GPU texture width the specified `config`.
     pub fn new(device: &Device, renderer: &Renderer, config: TextureConfig) -> Self {
         // Create the wgpu texture.
-        let texture = device.create_texture(&TextureDescriptor {
+        let texture = Arc::new(device.create_texture(&TextureDescriptor {
             label: config.label,
             size: config.size,
             mip_level_count: config.mip_level_count,
@@ -139,16 +140,16 @@ impl Texture {
             dimension: config.dimension,
             format: config.format.unwrap_or(renderer.config.texture_format),
             usage: config.usage,
-        });
+        }));
 
         // Extract the texture view.
-        let view = texture.create_view(&TextureViewDescriptor::default());
+        let view = Arc::new(texture.create_view(&TextureViewDescriptor::default()));
 
         // Create the texture sampler.
         let sampler = device.create_sampler(&config.sampler_desc);
 
         // Create the texture bind group from the layout.
-        let bind_group = device.create_bind_group(&BindGroupDescriptor {
+        let bind_group = Arc::new(device.create_bind_group(&BindGroupDescriptor {
             label: config.label,
             layout: &renderer.texture_layout,
             entries: &[
@@ -161,7 +162,7 @@ impl Texture {
                     resource: BindingResource::Sampler(&sampler),
                 },
             ],
-        });
+        }));
 
         Self {
             texture,
