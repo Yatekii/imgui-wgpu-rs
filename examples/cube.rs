@@ -368,6 +368,7 @@ fn main() {
         width: size.width as u32,
         height: size.height as u32,
         present_mode: wgpu::PresentMode::Fifo,
+        alpha_mode: wgpu::CompositeAlphaMode::Auto,
     };
 
     surface.configure(&device, &surface_desc);
@@ -454,6 +455,7 @@ fn main() {
                     width: size.width as u32,
                     height: size.height as u32,
                     present_mode: wgpu::PresentMode::Fifo,
+                    alpha_mode: wgpu::CompositeAlphaMode::Auto,
                 };
 
                 surface.configure(&device, &surface_desc);
@@ -507,9 +509,9 @@ fn main() {
                 // Store the new size of Image() or None to indicate that the window is collapsed.
                 let mut new_example_size: Option<[f32; 2]> = None;
 
-                imgui::Window::new("Cube")
+                ui.window("Cube")
                     .size([512.0, 512.0], Condition::FirstUseEver)
-                    .build(&ui, || {
+                    .build(|| {
                         new_example_size = Some(ui.content_region_avail());
                         imgui::Image::new(example_texture_id, new_example_size.unwrap()).build(&ui);
                     });
@@ -567,7 +569,7 @@ fn main() {
                 });
 
                 renderer
-                    .render(ui.render(), &queue, &device, &mut rpass)
+                    .render(imgui.render(), &queue, &device, &mut rpass)
                     .expect("Rendering failed");
 
                 drop(rpass);

@@ -32,6 +32,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 - [Diffs](#diffs)
 
 ## Unreleased
+- Bump imgui version to 0.9.0. Fix examples to match. @aholtzma-am
 
 ## v0.20.0
 

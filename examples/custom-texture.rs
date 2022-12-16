@@ -61,6 +61,7 @@ fn main() {
         width: size.width as u32,
         height: size.height as u32,
         present_mode: wgpu::PresentMode::Fifo,
+        alpha_mode: wgpu::CompositeAlphaMode::Auto,
     };
 
     surface.configure(&device, &surface_desc);
@@ -150,6 +151,7 @@ fn main() {
                     width: size.width as u32,
                     height: size.height as u32,
                     present_mode: wgpu::PresentMode::Fifo,
+                    alpha_mode: wgpu::CompositeAlphaMode::Auto,
                 };
 
                 surface.configure(&device, &surface_desc);
@@ -195,10 +197,10 @@ fn main() {
 
                 {
                     let size = [width as f32, height as f32];
-                    let window = imgui::Window::new("Hello world");
+                    let window = ui.window("Hello world");
                     window
                         .size([400.0, 600.0], Condition::FirstUseEver)
-                        .build(&ui, || {
+                        .build(|| {
                             ui.text("Hello textures!");
                             ui.text("Say hello to checker.png");
                             Image::new(lenna_texture_id, size).build(&ui);
@@ -230,7 +232,7 @@ fn main() {
                 });
 
                 renderer
-                    .render(ui.render(), &queue, &device, &mut rpass)
+                    .render(imgui.render(), &queue, &device, &mut rpass)
                     .expect("Rendering failed");
 
                 drop(rpass);
