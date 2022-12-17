@@ -1,8 +1,8 @@
 # dear imgui wgpu-rs renderer
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/Yatekii/imgui-wgpu-rs/Build)
-[![Crates.io](https://img.shields.io/crates/v/imgui-wgpu)](https://crates.io/crates/imgui-wgpu)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Yatekii/imgui-wgpu-rs/build.yml?branch=master)
 [![Documentation](https://docs.rs/imgui-wgpu/badge.svg)](https://docs.rs/imgui-wgpu)
+[![Crates.io](https://img.shields.io/crates/v/imgui-wgpu)](https://crates.io/crates/imgui-wgpu)
 ![License](https://img.shields.io/crates/l/imgui-wgpu)
 
 Draw dear imgui UIs as a wgpu render pass. Based on [imgui-gfx-renderer](https://github.com/Gekkio/imgui-rs/tree/master/imgui-gfx-renderer) from [imgui-rs](https://github.com/Gekkio/imgui-rs).
@@ -22,7 +22,7 @@ cargo run --release --example hello-world
 
 # Status
 
-Supports `wgpu` `0.13` and imgui `0.8`. `winit-0.26` is used with the examples.
+Supports `wgpu` `0.14` and imgui `0.9`. `winit-0.27` is used with the examples.
 
 Contributions are very welcome.
 
