@@ -4,24 +4,25 @@ allow-osi-fsf-free = "either"
 allow = [
     "Apache-2.0",
     "MIT",
+    "MPL-2.0",
     "Unlicense",
 ]
 
 [bans]
 multiple-versions = "deny"
 skip = [
-    { name = "cfg-if", version = "0.1.10" },
-    { name = "core-foundation", version = "0.7.0" },
-    { name = "core-foundation-sys", version = "0.7.0" },
-    { name = "core-graphics", version = "0.19.2" },
-    { name = "hashbrown", version = "0.11.2" },
-    { name = "parking_lot", version = "0.11.2" },
-    { name = "parking_lot_core", version = "0.8.5" },
+]
+skip-tree = [
+    { name = "winit", version = "0.27.5" },
+    { name = "windows-sys", version = "0.36.1" },
 ]
 
 [advisories]
 vulnerability = "deny"
 unmaintained = "deny"
+ignore = [
+    "RUSTSEC-2022-0048"
+]
 
 [sources]
 unknown-registry = "deny"
