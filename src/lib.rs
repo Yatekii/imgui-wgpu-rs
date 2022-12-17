@@ -528,7 +528,7 @@ impl Renderer {
             // This is required to adapt to vulkan coordinates.
             let matrix = [
                 [2.0 / width, 0.0, 0.0, 0.0],
-                [0.0, 2.0 / -height as f32, 0.0, 0.0],
+                [0.0, 2.0 / -height, 0.0, 0.0],
                 [0.0, 0.0, 1.0, 0.0],
                 [-1.0 - offset_x * 2.0, 1.0 + offset_y * 2.0, 0.0, 1.0],
             ];
