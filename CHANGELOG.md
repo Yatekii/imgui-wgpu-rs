@@ -34,6 +34,9 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+- Moved from Rust Edition 2018 -> 2021 @Snowiiii
+- Update wgpu 0.14 -> 0.14.2 @Snowiiii
+
 ## v0.21.0
 
 Released 2022-12-17
