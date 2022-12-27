@@ -509,10 +509,10 @@ impl Renderer {
         }
 
         // Only update matrices if the size or position changes
-        if (render_data.last_size[0] - draw_data.display_size[0]).abs() > std::f32::EPSILON
-            || (render_data.last_size[1] - draw_data.display_size[1]).abs() > std::f32::EPSILON
-            || (render_data.last_pos[0] - draw_data.display_pos[0]).abs() > std::f32::EPSILON
-            || (render_data.last_pos[1] - draw_data.display_pos[1]).abs() > std::f32::EPSILON
+        if (render_data.last_size[0] - draw_data.display_size[0]).abs() > f32::EPSILON
+            || (render_data.last_size[1] - draw_data.display_size[1]).abs() > f32::EPSILON
+            || (render_data.last_pos[0] - draw_data.display_pos[0]).abs() > f32::EPSILON
+            || (render_data.last_pos[1] - draw_data.display_pos[1]).abs() > f32::EPSILON
         {
             render_data.fb_size = [fb_width, fb_height];
             render_data.last_size = draw_data.display_size;
