@@ -1,11 +1,8 @@
-[workspace]
-resolver = "2"
-
 [package]
 name = "imgui-wgpu"
 version = "0.21.0"
 authors = ["Noah Hüsser <yatekii@yatekii.ch>", "Connor Fitzgerald <connorwadefitzgerald@gmail.com>", "Steven Wittens <steven@acko.net>"]
-edition = "2018"
+edition = "2021"
 description = "A wgpu render backend for imgui-rs."
 documentation = "https://docs.rs/imgui-wgpu/"
 homepage = "https://github.com/Yatekii/imgui-wgpu-rs"
