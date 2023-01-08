@@ -16,6 +16,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 #### Table of Contents
 
 - [Unreleased](#unreleased)
+- [v0.21.0](#v0210)
 - [v0.20.0](#v0200)
 - [v0.19.0](#v0190)
 - [v0.18.0](#v0180)
@@ -33,6 +34,13 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 - Make `Texture::from_raw_parts` take `Arc<T>` instead of `T` to avoid being forced to move into the texture @BeastLe9enD
+
+- Moved from Rust Edition 2018 -> 2021 @Snowiiii
+
+## v0.21.0
+
+Released 2022-12-17
+- Bump imgui version to 0.9.0. Fix examples to match. @aholtzma-am
 
 ## v0.20.0
 
@@ -175,7 +183,8 @@ Released 2020-11-21
 
 ## Diffs
 
-- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.20.0...HEAD)
+- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.21.0...HEAD)
+- [v0.21.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.20.0...v0.21.0)
 - [v0.20.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.19.0...v0.20.0)
 - [v0.19.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.18.0...v0.19.0)
 - [v0.18.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.17.2...v0.18.0)

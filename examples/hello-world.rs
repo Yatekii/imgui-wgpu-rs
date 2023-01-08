@@ -55,6 +55,7 @@ fn main() {
         width: size.width as u32,
         height: size.height as u32,
         present_mode: wgpu::PresentMode::Fifo,
+        alpha_mode: wgpu::CompositeAlphaMode::Auto,
     };
 
     surface.configure(&device, &surface_desc);
@@ -123,6 +124,7 @@ fn main() {
                     width: size.width as u32,
                     height: size.height as u32,
                     present_mode: wgpu::PresentMode::Fifo,
+                    alpha_mode: wgpu::CompositeAlphaMode::Auto,
                 };
 
                 surface.configure(&device, &surface_desc);
@@ -166,10 +168,10 @@ fn main() {
                 let ui = imgui.frame();
 
                 {
-                    let window = imgui::Window::new("Hello world");
+                    let window = ui.window("Hello world");
                     window
                         .size([300.0, 100.0], Condition::FirstUseEver)
-                        .build(&ui, || {
+                        .build(|| {
                             ui.text("Hello world!");
                             ui.text("This...is...imgui-rs on WGPU!");
                             ui.separator();
@@ -180,11 +182,11 @@ fn main() {
                             ));
                         });
 
-                    let window = imgui::Window::new("Hello too");
+                    let window = ui.window("Hello too");
                     window
                         .size([400.0, 200.0], Condition::FirstUseEver)
                         .position([400.0, 200.0], Condition::FirstUseEver)
-                        .build(&ui, || {
+                        .build(|| {
                             ui.text(format!("Frametime: {:?}", delta_s));
                         });
 
@@ -216,7 +218,7 @@ fn main() {
                 });
 
                 renderer
-                    .render(ui.render(), &queue, &device, &mut rpass)
+                    .render(imgui.render(), &queue, &device, &mut rpass)
                     .expect("Rendering failed");
 
                 drop(rpass);

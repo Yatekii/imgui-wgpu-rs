@@ -1,11 +1,8 @@
-[workspace]
-resolver = "2"
-
 [package]
 name = "imgui-wgpu"
-version = "0.20.0"
+version = "0.21.0"
 authors = ["Noah Hüsser <yatekii@yatekii.ch>", "Connor Fitzgerald <connorwadefitzgerald@gmail.com>", "Steven Wittens <steven@acko.net>"]
-edition = "2018"
+edition = "2021"
 description = "A wgpu render backend for imgui-rs."
 documentation = "https://docs.rs/imgui-wgpu/"
 homepage = "https://github.com/Yatekii/imgui-wgpu-rs"
@@ -46,20 +43,20 @@ min = 0  # allow non-first increment
 
 [dependencies]
 bytemuck = "1"
-imgui = "0.8"
+imgui = "0.9"
 log = "0.4"
 smallvec = "1"
-wgpu = "0.13"
+wgpu = "0.14"
 
 [dev-dependencies]
 bytemuck = { version = "1.4", features = ["derive"] }
 cgmath = "0.18"
-env_logger = "0.9"
-image = { version = "0.23", default-features = false, features = ["png"] }
-imgui-winit-support = { version = "0.8", default-features = false, features = ["winit-26"] }
+env_logger = "0.10"
+image = { version = "0.24", default-features = false, features = ["png"] }
+imgui-winit-support = { version = "0.9"  }
 pollster = "0.2"
-raw-window-handle = "0.4"
-winit = "0.26"
+raw-window-handle = "0.5"
+winit = "0.27.5"
 
 [package.metadata.docs.rs]
 all-features = true
