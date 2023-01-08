@@ -47,6 +47,16 @@ enum ShaderStage {
     Compute,
 }
 
+/// Config for creating a texture from raw parts
+///
+#[derive(Clone)]
+pub struct RawTextureConfig<'a> {
+    /// An optional label for the bind group used for debugging.
+    pub label: Option<&'a str>,
+    /// The sampler descriptor of the texture.
+    pub sampler_desc: SamplerDescriptor<'a>,
+}
+
 /// Config for creating a texture.
 ///
 /// Uses the builder pattern.
@@ -115,12 +125,40 @@ pub struct Texture {
 
 impl Texture {
     /// Create a `Texture` from its raw parts.
+    /// - `bind_group`: The bind group used by the texture. If it is `None`, the bind group will be created like in `Self::new`.
+    /// - `config`: The config used for creating the bind group. If `bind_group` is `Some(_)`, it will be ignored
     pub fn from_raw_parts(
+        device: &Device,
+        renderer: &Renderer,
         texture: Arc<wgpu::Texture>,
         view: Arc<wgpu::TextureView>,
-        bind_group: Arc<BindGroup>,
+        bind_group: Option<Arc<BindGroup>>,
+        config: Option<&RawTextureConfig>,
         size: Extent3d,
     ) -> Self {
+        let bind_group = bind_group.unwrap_or_else(|| {
+            let config = config.unwrap();
+
+            // Create the texture sampler.
+            let sampler = device.create_sampler(&config.sampler_desc);
+
+            // Create the texture bind group from the layout.
+            Arc::new(device.create_bind_group(&BindGroupDescriptor {
+                label: config.label,
+                layout: &renderer.texture_layout,
+                entries: &[
+                    BindGroupEntry {
+                        binding: 0,
+                        resource: BindingResource::TextureView(&view),
+                    },
+                    BindGroupEntry {
+                        binding: 1,
+                        resource: BindingResource::Sampler(&sampler),
+                    },
+                ],
+            }))
+        });
+
         Self {
             texture,
             view,
