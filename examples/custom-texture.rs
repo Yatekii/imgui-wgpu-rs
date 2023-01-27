@@ -110,7 +110,7 @@ fn main() {
     let lenna_bytes = include_bytes!("../resources/checker.png");
     let image =
         image::load_from_memory_with_format(lenna_bytes, ImageFormat::Png).expect("invalid image");
-    let image = image.to_bgra8();
+    let image = image.to_rgba8();
     let (width, height) = image.dimensions();
     let raw_data = image.into_raw();
 
@@ -121,6 +121,7 @@ fn main() {
             ..Default::default()
         },
         label: Some("lenna texture"),
+        format: Some(wgpu::TextureFormat::Rgba8Unorm),
         ..Default::default()
     };
 
