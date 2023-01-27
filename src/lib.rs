@@ -91,7 +91,7 @@ impl<'a> Default for TextureConfig<'a> {
             mag_filter: FilterMode::Linear,
             min_filter: FilterMode::Linear,
             mipmap_filter: FilterMode::Linear,
-            lod_min_clamp: -100.0,
+            lod_min_clamp: 0.0,
             lod_max_clamp: 100.0,
             compare: None,
             anisotropy_clamp: None,
@@ -178,6 +178,7 @@ impl Texture {
             dimension: config.dimension,
             format: config.format.unwrap_or(renderer.config.texture_format),
             usage: config.usage,
+            view_formats: &[config.format.unwrap_or(renderer.config.texture_format)],
         }));
 
         // Extract the texture view.

@@ -17,7 +17,10 @@ fn main() {
     // Set up window and GPU
     let event_loop = EventLoop::new();
 
-    let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::PRIMARY,
+        ..Default::default()
+    });
 
     let (window, size, surface) = {
         let version = env!("CARGO_PKG_VERSION");
@@ -30,7 +33,7 @@ fn main() {
         window.set_title(&format!("imgui-wgpu {version}"));
         let size = window.inner_size();
 
-        let surface = unsafe { instance.create_surface(&window) };
+        let surface = unsafe { instance.create_surface(&window) }.unwrap();
 
         (window, size, surface)
     };
@@ -62,6 +65,7 @@ fn main() {
         height: size.height,
         present_mode: wgpu::PresentMode::Fifo,
         alpha_mode: wgpu::CompositeAlphaMode::Auto,
+        view_formats: vec![wgpu::TextureFormat::Bgra8Unorm],
     };
 
     surface.configure(&device, &surface_desc);
@@ -153,6 +157,7 @@ fn main() {
                     height: size.height,
                     present_mode: wgpu::PresentMode::Fifo,
                     alpha_mode: wgpu::CompositeAlphaMode::Auto,
+                    view_formats: vec![wgpu::TextureFormat::Bgra8Unorm],
                 };
 
                 surface.configure(&device, &surface_desc);
