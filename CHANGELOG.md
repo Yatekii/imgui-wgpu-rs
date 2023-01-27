@@ -35,8 +35,8 @@ Per Keep a Changelog there are 6 main categories of changes:
 ## Unreleased
 - Change `BindGroup` inside `Texture::from_raw_parts` to `Option<BindGroup>` to allow bind group being created by `imgui-wgpu-rs` @BeastLe9enD
 - Make `Texture::from_raw_parts` take `Arc<T>` instead of `T` to avoid being forced to move into the texture @BeastLe9enD
-
 - Moved from Rust Edition 2018 -> 2021 @Snowiiii
+- Updated `imgui` to 0.10 and `wgpu` to 0.15. @parasyte
 
 ## v0.21.0
 
