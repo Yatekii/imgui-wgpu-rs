@@ -27,7 +27,7 @@ fn main() {
             width: 1280.0,
             height: 720.0,
         });
-        window.set_title(&format!("imgui-wgpu {}", version));
+        window.set_title(&format!("imgui-wgpu {version}"));
         let size = window.inner_size();
 
         let surface = unsafe { instance.create_surface(&window) };
@@ -58,8 +58,8 @@ fn main() {
     let surface_desc = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: wgpu::TextureFormat::Bgra8UnormSrgb,
-        width: size.width as u32,
-        height: size.height as u32,
+        width: size.width,
+        height: size.height,
         present_mode: wgpu::PresentMode::Fifo,
         alpha_mode: wgpu::CompositeAlphaMode::Auto,
     };
@@ -149,8 +149,8 @@ fn main() {
                 let surface_desc = wgpu::SurfaceConfiguration {
                     usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                    width: size.width as u32,
-                    height: size.height as u32,
+                    width: size.width,
+                    height: size.height,
                     present_mode: wgpu::PresentMode::Fifo,
                     alpha_mode: wgpu::CompositeAlphaMode::Auto,
                 };
@@ -187,7 +187,7 @@ fn main() {
                 let frame = match surface.get_current_texture() {
                     Ok(frame) => frame,
                     Err(e) => {
-                        eprintln!("dropped frame: {:?}", e);
+                        eprintln!("dropped frame: {e:?}");
                         return;
                     }
                 };
@@ -204,7 +204,7 @@ fn main() {
                         .build(|| {
                             ui.text("Hello textures!");
                             ui.text("Say hello to checker.png");
-                            Image::new(lenna_texture_id, size).build(&ui);
+                            Image::new(lenna_texture_id, size).build(ui);
                         });
                 }
 
@@ -213,7 +213,7 @@ fn main() {
 
                 if last_cursor != Some(ui.mouse_cursor()) {
                     last_cursor = Some(ui.mouse_cursor());
-                    platform.prepare_render(&ui, &window);
+                    platform.prepare_render(ui, &window);
                 }
 
                 let view = frame
