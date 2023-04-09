@@ -35,6 +35,8 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+- Bump imgui version to 0.11.0. @benmkw
+
 ## v0.22.0
 
 Released 2023-02-10
