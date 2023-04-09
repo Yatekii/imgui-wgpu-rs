@@ -43,18 +43,18 @@ min = 0  # allow non-first increment
 
 [dependencies]
 bytemuck = "1"
-imgui = "0.10"
+imgui = "0.11"
 log = "0.4"
 smallvec = "1"
 wgpu = "0.15"
 
 [dev-dependencies]
-bytemuck = { version = "1.4", features = ["derive"] }
+bytemuck = { version = "1.13", features = ["derive"] }
 cgmath = "0.18"
 env_logger = "0.10"
 image = { version = "0.24", default-features = false, features = ["png"] }
-imgui-winit-support = { version = "0.10"  }
-pollster = "0.2"
+imgui-winit-support = "0.11"
+pollster = "0.3"
 raw-window-handle = "0.5"
 winit = "0.27.5"
 
