@@ -449,11 +449,9 @@ fn main() {
         };
         match event {
             Event::WindowEvent {
-                event: WindowEvent::Resized(_),
+                event: WindowEvent::Resized(size),
                 ..
             } => {
-                let size = window.inner_size();
-
                 let surface_desc = wgpu::SurfaceConfiguration {
                     usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                     format: wgpu::TextureFormat::Bgra8UnormSrgb,
