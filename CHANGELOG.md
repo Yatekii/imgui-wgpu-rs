@@ -36,7 +36,8 @@ Per Keep a Changelog there are 6 main categories of changes:
 ## Unreleased
 
 - Bump imgui version to 0.11.0. @benmkw
-- Bump wgpu version to 0.16 @Nelarius
+- Fix issue with scissors due to wrong resizing logic. @dcvz
+- Bump wgpu version to 0.16. @Nelarius
 
 ## v0.22.0
 
