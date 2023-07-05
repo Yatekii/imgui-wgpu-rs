@@ -2,10 +2,10 @@ use imgui::{
     Context, DrawCmd::Elements, DrawData, DrawIdx, DrawList, DrawVert, TextureId, Textures,
 };
 use smallvec::SmallVec;
+use std::error::Error;
 use std::fmt;
 use std::mem::size_of;
 use std::sync::Arc;
-use std::{error::Error, num::NonZeroU32};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 
@@ -94,7 +94,7 @@ impl<'a> Default for TextureConfig<'a> {
             lod_min_clamp: 0.0,
             lod_max_clamp: 100.0,
             compare: None,
-            anisotropy_clamp: None,
+            anisotropy_clamp: 1,
             border_color: None,
         };
 
@@ -230,8 +230,8 @@ impl Texture {
             // layout of the source bitmap
             ImageDataLayout {
                 offset: 0,
-                bytes_per_row: NonZeroU32::new(width * 4),
-                rows_per_image: NonZeroU32::new(height),
+                bytes_per_row: Some(width * 4),
+                rows_per_image: Some(height),
             },
             // size of the source bitmap
             Extent3d {

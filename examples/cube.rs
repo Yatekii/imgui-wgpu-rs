@@ -197,7 +197,7 @@ impl Example {
             &texels,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: Some(std::num::NonZeroU32::new(size).unwrap()),
+                bytes_per_row: Some(size),
                 rows_per_image: None,
             },
             texture_extent,
