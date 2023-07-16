@@ -765,7 +765,7 @@ impl Renderer {
     ///
     /// This has to be called after loading a font.
     pub fn reload_font_texture(&mut self, imgui: &mut Context, device: &Device, queue: &Queue) {
-        let mut fonts = imgui.fonts();
+        let fonts = imgui.fonts();
         // Remove possible font atlas texture.
         self.textures.remove(fonts.tex_id);
 

@@ -22,16 +22,6 @@ cargo run --release --example hello-world
 
 # Status
 
-Supports `wgpu` `0.14` and imgui `0.9`. `winit-0.27` is used with the examples.
+Supports `wgpu` `0.16` and imgui `0.11`. `winit-0.27` is used with the examples.
 
 Contributions are very welcome.
-
-# Troubleshooting
-
-## Cargo resolver
-
-Starting with [`wgpu` 0.10](https://github.com/gfx-rs/wgpu/blob/06316c1bac8b78ac04d762cfb1a886bd1d453b30/CHANGELOG.md#v010-2021-08-18), the [resolver version](https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions) needs to be set in your `Cargo.toml` to avoid build errors:
-
-```toml
-resolver = "2"
-```
