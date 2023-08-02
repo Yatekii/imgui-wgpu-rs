@@ -22,6 +22,6 @@ cargo run --release --example hello-world
 
 # Status
 
-Supports `wgpu` `0.16` and imgui `0.11`. `winit-0.27` is used with the examples.
+Supports `wgpu` `0.17` and imgui `0.11`. `winit-0.27` is used with the examples.
 
 Contributions are very welcome.

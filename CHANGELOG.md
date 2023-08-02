@@ -35,6 +35,8 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+- Bump wgpu version to 0.17. @cwfitzgerald
+
 ## v0.23.0
 
 - Bump imgui version to 0.11.0. @benmkw
