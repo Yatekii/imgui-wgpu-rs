@@ -36,6 +36,8 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+- Internal: Fixed Scissor-Rect to not span across Framebuffersize, by limiting to framebuffer width. @PixelboysTM
+
 ## v0.24.0
 
 Released 2023-08-02
