@@ -6,37 +6,35 @@ use std::time::Instant;
 use wgpu::Extent3d;
 use winit::{
     dpi::LogicalSize,
-    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+    event::{ElementState, Event, KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::Window,
+    keyboard::{Key, NamedKey},
+    window::WindowBuilder,
 };
 
 fn main() {
     env_logger::init();
 
     // Set up window and GPU
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoop::new().unwrap();
 
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends: wgpu::Backends::PRIMARY,
         ..Default::default()
     });
 
-    let (window, size, surface) = {
+    let window = {
         let version = env!("CARGO_PKG_VERSION");
 
-        let window = Window::new(&event_loop).unwrap();
-        window.set_inner_size(LogicalSize {
-            width: 1280.0,
-            height: 720.0,
-        });
-        window.set_title(&format!("imgui-wgpu {version}"));
-        let size = window.inner_size();
-
-        let surface = unsafe { instance.create_surface(&window) }.unwrap();
-
-        (window, size, surface)
+        let size = LogicalSize::new(1280.0, 720.0);
+        WindowBuilder::new()
+            .with_inner_size(size)
+            .with_title(&format!("imgui-wgpu {version}"))
+            .build(&event_loop)
+            .unwrap()
     };
+    let size = window.inner_size();
+    let surface = instance.create_surface(&window).unwrap();
 
     let hidpi_factor = window.scale_factor();
 
@@ -50,8 +48,8 @@ fn main() {
     let (device, queue) = block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
             label: None,
-            features: wgpu::Features::empty(),
-            limits: wgpu::Limits::default(),
+            required_features: wgpu::Features::empty(),
+            required_limits: wgpu::Limits::default(),
         },
         None,
     ))
@@ -64,6 +62,7 @@ fn main() {
         width: size.width,
         height: size.height,
         present_mode: wgpu::PresentMode::Fifo,
+        desired_maximum_frame_latency: 2,
         alpha_mode: wgpu::CompositeAlphaMode::Auto,
         view_formats: vec![wgpu::TextureFormat::Bgra8Unorm],
     };
@@ -110,10 +109,10 @@ fn main() {
 
     let mut last_frame = Instant::now();
 
-    // Set up Lenna texture
-    let lenna_bytes = include_bytes!("../resources/checker.png");
-    let image =
-        image::load_from_memory_with_format(lenna_bytes, ImageFormat::Png).expect("invalid image");
+    // Set up checker texture
+    let checker_bytes = include_bytes!("../resources/checker.png");
+    let image = image::load_from_memory_with_format(checker_bytes, ImageFormat::Png)
+        .expect("invalid image");
     let image = image.to_rgba8();
     let (width, height) = image.dimensions();
     let raw_data = image.into_raw();
@@ -124,7 +123,7 @@ fn main() {
             height,
             ..Default::default()
         },
-        label: Some("lenna texture"),
+        label: Some("checker texture"),
         format: Some(wgpu::TextureFormat::Rgba8Unorm),
         ..Default::default()
     };
@@ -132,16 +131,16 @@ fn main() {
     let texture = Texture::new(&device, &renderer, texture_config);
 
     texture.write(&queue, &raw_data, width, height);
-    let lenna_texture_id = renderer.textures.insert(texture);
+    let checker_texture_id = renderer.textures.insert(texture);
 
     let mut last_cursor = None;
 
     // Event loop
-    event_loop.run(move |event, _, control_flow| {
-        *control_flow = if cfg!(feature = "metal-auto-capture") {
-            ControlFlow::Exit
+    let _ = event_loop.run(|event, elwt| {
+        if cfg!(feature = "metal-auto-capture") {
+            elwt.exit();
         } else {
-            ControlFlow::Poll
+            elwt.set_control_flow(ControlFlow::Poll)
         };
         match event {
             Event::WindowEvent {
@@ -154,6 +153,7 @@ fn main() {
                     width: size.width,
                     height: size.height,
                     present_mode: wgpu::PresentMode::Fifo,
+                    desired_maximum_frame_latency: 2,
                     alpha_mode: wgpu::CompositeAlphaMode::Auto,
                     view_formats: vec![wgpu::TextureFormat::Bgra8Unorm],
                 };
@@ -163,9 +163,9 @@ fn main() {
             Event::WindowEvent {
                 event:
                     WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                        event:
+                            KeyEvent {
+                                logical_key: Key::Named(NamedKey::Escape),
                                 state: ElementState::Pressed,
                                 ..
                             },
@@ -177,12 +177,12 @@ fn main() {
                 event: WindowEvent::CloseRequested,
                 ..
             } => {
-                *control_flow = ControlFlow::Exit;
+                elwt.exit();
             }
-            Event::MainEventsCleared => {
-                window.request_redraw();
-            }
-            Event::RedrawEventsCleared => {
+            Event::WindowEvent {
+                event: WindowEvent::RedrawRequested,
+                ..
+            } => {
                 let now = Instant::now();
                 imgui.io_mut().update_delta_time(now - last_frame);
                 last_frame = now;
@@ -207,7 +207,7 @@ fn main() {
                         .build(|| {
                             ui.text("Hello textures!");
                             ui.text("Say hello to checker.png");
-                            Image::new(lenna_texture_id, size).build(ui);
+                            Image::new(checker_texture_id, size).build(ui);
                         });
                 }
 
@@ -246,7 +246,8 @@ fn main() {
                 queue.submit(Some(encoder.finish()));
                 frame.present();
             }
-            _ => (),
+            Event::AboutToWait => window.request_redraw(),
+            _ => {}
         }
 
         platform.handle_event(imgui.io_mut(), &window, &event);
