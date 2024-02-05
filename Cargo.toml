@@ -43,20 +43,20 @@ min = 0  # allow non-first increment
 
 [dependencies]
 bytemuck = "1"
-imgui = "0.11"
+imgui = { git = "https://github.com/imgui-rs/imgui-rs" }
 log = "0.4"
 smallvec = "1"
-wgpu = "0.17"
+wgpu = "0.19"
 
 [dev-dependencies]
 bytemuck = { version = "1.13", features = ["derive"] }
 cgmath = "0.18"
 env_logger = "0.10"
 image = { version = "0.24", default-features = false, features = ["png"] }
-imgui-winit-support = "0.11"
+imgui-winit-support = { git = "https://github.com/imgui-rs/imgui-rs" }
 pollster = "0.3"
 raw-window-handle = "0.5"
-winit = "0.27.5"
+winit = "0.29"
 
 [package.metadata.docs.rs]
 all-features = true
