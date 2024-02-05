@@ -7,8 +7,9 @@ use pollster::block_on;
 use std::time::Instant;
 use winit::{
     dpi::LogicalSize,
-    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+    event::{ElementState, Event, WindowEvent, KeyEvent},
     event_loop::{ControlFlow, EventLoop},
+    keyboard::{Key, NamedKey},
     window::Window,
 };
 
@@ -16,28 +17,25 @@ fn main() {
     env_logger::init();
 
     // Set up window and GPU
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoop::new().expect("Error creating event loop");
 
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends: wgpu::Backends::PRIMARY,
         ..Default::default()
     });
 
-    let (window, size, surface) = {
+    let (window, size) = {
         let version = env!("CARGO_PKG_VERSION");
 
         let window = Window::new(&event_loop).unwrap();
-        window.set_inner_size(LogicalSize {
-            width: 1280.0,
-            height: 720.0,
-        });
+        let _ = window.request_inner_size(LogicalSize::new(1280.0, 720.0));
         window.set_title(&format!("imgui-wgpu {version}"));
         let size = window.inner_size();
 
-        let surface = unsafe { instance.create_surface(&window) }.unwrap();
-
-        (window, size, surface)
+        (window, size)
     };
+
+    let surface = instance.create_surface(&window).unwrap();
 
     let hidpi_factor = window.scale_factor();
 
@@ -60,6 +58,7 @@ fn main() {
         present_mode: wgpu::PresentMode::Fifo,
         alpha_mode: wgpu::CompositeAlphaMode::Auto,
         view_formats: vec![wgpu::TextureFormat::Bgra8Unorm],
+        desired_maximum_frame_latency: 0,
     };
 
     surface.configure(&device, &surface_desc);
@@ -108,12 +107,12 @@ fn main() {
 
     let mut last_cursor = None;
 
+    event_loop.set_control_flow(ControlFlow::Poll);
+
     // Event loop
-    event_loop.run(move |event, _, control_flow| {
-        *control_flow = if cfg!(feature = "metal-auto-capture") {
-            ControlFlow::Exit
-        } else {
-            ControlFlow::Poll
+    let _ = event_loop.run(|event, elwt| {
+        if cfg!(feature = "metal-auto-capture") {
+            elwt.exit();
         };
         match event {
             Event::WindowEvent {
@@ -128,6 +127,7 @@ fn main() {
                     present_mode: wgpu::PresentMode::Fifo,
                     alpha_mode: wgpu::CompositeAlphaMode::Auto,
                     view_formats: vec![wgpu::TextureFormat::Bgra8Unorm],
+                    desired_maximum_frame_latency: 0,
                 };
 
                 surface.configure(&device, &surface_desc);
@@ -135,9 +135,9 @@ fn main() {
             Event::WindowEvent {
                 event:
                     WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                        event: 
+                            KeyEvent {
+                                logical_key: Key::Named(NamedKey::Escape),
                                 state: ElementState::Pressed,
                                 ..
                             },
@@ -149,10 +149,13 @@ fn main() {
                 event: WindowEvent::CloseRequested,
                 ..
             } => {
-                *control_flow = ControlFlow::Exit;
+                elwt.exit();
             }
-            Event::MainEventsCleared => window.request_redraw(),
-            Event::RedrawEventsCleared => {
+            Event::AboutToWait => window.request_redraw(),
+            Event::WindowEvent {
+                event: WindowEvent::RedrawRequested,
+                ..
+            } => {
                 let delta_s = last_frame.elapsed();
                 let now = Instant::now();
                 imgui.io_mut().update_delta_time(now - last_frame);
@@ -214,10 +217,12 @@ fn main() {
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(clear_color),
-                            store: true,
+                            store: wgpu::StoreOp::Store,
                         },
                     })],
                     depth_stencil_attachment: None,
+                    occlusion_query_set: None,
+                    timestamp_writes: None,
                 });
 
                 renderer
