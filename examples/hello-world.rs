@@ -191,6 +191,7 @@ fn main() {
                         .position([400.0, 200.0], Condition::FirstUseEver)
                         .build(|| {
                             ui.text(format!("Frametime: {delta_s:?}"));
+                            ui.text(format!("FPS:       {}", 1.0 / delta_s.as_secs_f32()));
                         });
 
                     ui.show_demo_window(&mut demo_open);
@@ -214,10 +215,12 @@ fn main() {
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(clear_color),
-                            store: true,
+                            store: wgpu::StoreOp::Store,
                         },
                     })],
                     depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None
                 });
 
                 renderer
