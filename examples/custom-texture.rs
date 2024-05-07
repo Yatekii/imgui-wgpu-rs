@@ -6,7 +6,7 @@ use std::time::Instant;
 use wgpu::Extent3d;
 use winit::{
     dpi::LogicalSize,
-    event::{ElementState, Event, KeyEvent, WindowEvent},
+    event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
     window::WindowBuilder,
@@ -143,110 +143,96 @@ fn main() {
             elwt.set_control_flow(ControlFlow::Poll)
         };
         match event {
-            Event::WindowEvent {
-                event: WindowEvent::Resized(size),
-                ..
-            } => {
-                let surface_desc = wgpu::SurfaceConfiguration {
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                    width: size.width,
-                    height: size.height,
-                    present_mode: wgpu::PresentMode::Fifo,
-                    desired_maximum_frame_latency: 2,
-                    alpha_mode: wgpu::CompositeAlphaMode::Auto,
-                    view_formats: vec![wgpu::TextureFormat::Bgra8Unorm],
-                };
-
-                surface.configure(&device, &surface_desc);
-            }
-            Event::WindowEvent {
-                event:
-                    WindowEvent::KeyboardInput {
-                        event:
-                            KeyEvent {
-                                logical_key: Key::Named(NamedKey::Escape),
-                                state: ElementState::Pressed,
-                                ..
-                            },
-                        ..
-                    },
-                ..
-            }
-            | Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => {
-                elwt.exit();
-            }
-            Event::WindowEvent {
-                event: WindowEvent::RedrawRequested,
-                ..
-            } => {
-                let now = Instant::now();
-                imgui.io_mut().update_delta_time(now - last_frame);
-                last_frame = now;
-
-                let frame = match surface.get_current_texture() {
-                    Ok(frame) => frame,
-                    Err(e) => {
-                        eprintln!("dropped frame: {e:?}");
-                        return;
-                    }
-                };
-                platform
-                    .prepare_frame(imgui.io_mut(), &window)
-                    .expect("Failed to prepare frame");
-                let ui = imgui.frame();
-
-                {
-                    let size = [width as f32, height as f32];
-                    let window = ui.window("Hello world");
-                    window
-                        .size([400.0, 600.0], Condition::FirstUseEver)
-                        .build(|| {
-                            ui.text("Hello textures!");
-                            ui.text("Say hello to checker.png");
-                            Image::new(checker_texture_id, size).build(ui);
-                        });
-                }
-
-                let mut encoder: wgpu::CommandEncoder =
-                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-
-                if last_cursor != Some(ui.mouse_cursor()) {
-                    last_cursor = Some(ui.mouse_cursor());
-                    platform.prepare_render(ui, &window);
-                }
-
-                let view = frame
-                    .texture
-                    .create_view(&wgpu::TextureViewDescriptor::default());
-                let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: None,
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: &view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(clear_color),
-                            store: wgpu::StoreOp::Store,
-                        },
-                    })],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                });
-
-                renderer
-                    .render(imgui.render(), &queue, &device, &mut rpass)
-                    .expect("Rendering failed");
-
-                drop(rpass);
-
-                queue.submit(Some(encoder.finish()));
-                frame.present();
-            }
             Event::AboutToWait => window.request_redraw(),
+            Event::WindowEvent { ref event, .. } => match event {
+                WindowEvent::Resized(size) => {
+                    let surface_desc = wgpu::SurfaceConfiguration {
+                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                        format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                        width: size.width,
+                        height: size.height,
+                        present_mode: wgpu::PresentMode::Fifo,
+                        desired_maximum_frame_latency: 2,
+                        alpha_mode: wgpu::CompositeAlphaMode::Auto,
+                        view_formats: vec![wgpu::TextureFormat::Bgra8Unorm],
+                    };
+
+                    surface.configure(&device, &surface_desc);
+                }
+                WindowEvent::CloseRequested => elwt.exit(),
+                WindowEvent::KeyboardInput { event, .. } => {
+                    if let Key::Named(NamedKey::Escape) = event.logical_key {
+                        if event.state.is_pressed() {
+                            elwt.exit();
+                        }
+                    }
+                }
+                WindowEvent::RedrawRequested => {
+                    let now = Instant::now();
+                    imgui.io_mut().update_delta_time(now - last_frame);
+                    last_frame = now;
+
+                    let frame = match surface.get_current_texture() {
+                        Ok(frame) => frame,
+                        Err(e) => {
+                            eprintln!("dropped frame: {e:?}");
+                            return;
+                        }
+                    };
+                    platform
+                        .prepare_frame(imgui.io_mut(), &window)
+                        .expect("Failed to prepare frame");
+                    let ui = imgui.frame();
+
+                    {
+                        let size = [width as f32, height as f32];
+                        let window = ui.window("Hello world");
+                        window
+                            .size([400.0, 600.0], Condition::FirstUseEver)
+                            .build(|| {
+                                ui.text("Hello textures!");
+                                ui.text("Say hello to checker.png");
+                                Image::new(checker_texture_id, size).build(ui);
+                            });
+                    }
+
+                    let mut encoder: wgpu::CommandEncoder = device
+                        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+                    if last_cursor != Some(ui.mouse_cursor()) {
+                        last_cursor = Some(ui.mouse_cursor());
+                        platform.prepare_render(ui, &window);
+                    }
+
+                    let view = frame
+                        .texture
+                        .create_view(&wgpu::TextureViewDescriptor::default());
+                    let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: None,
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(clear_color),
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                    });
+
+                    renderer
+                        .render(imgui.render(), &queue, &device, &mut rpass)
+                        .expect("Rendering failed");
+
+                    drop(rpass);
+
+                    queue.submit(Some(encoder.finish()));
+                    frame.present();
+                }
+                _ => {}
+            },
             _ => {}
         }
 
