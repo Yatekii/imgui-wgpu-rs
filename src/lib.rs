@@ -448,6 +448,7 @@ impl Renderer {
                     step_mode: VertexStepMode::Vertex,
                     attributes: &vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Unorm8x4],
                 }],
+                compilation_options: Default::default(),
             },
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,
@@ -488,6 +489,7 @@ impl Renderer {
                     }),
                     write_mask: ColorWrites::ALL,
                 })],
+                compilation_options: Default::default(),
             }),
             multiview: None,
         });

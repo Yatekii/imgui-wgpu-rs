@@ -6,7 +6,7 @@ use std::time::Instant;
 use wgpu::{include_wgsl, util::DeviceExt, Extent3d};
 use winit::{
     dpi::LogicalSize,
-    event::{ElementState, Event, WindowEvent, KeyEvent},
+    event::{ElementState, Event, KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
     window::Window,
@@ -255,11 +255,14 @@ impl Example {
                 module: &shader,
                 entry_point: "vs_main",
                 buffers: &vertex_buffers,
+                compilation_options: Default::default(),
             },
+
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
                 entry_point: "fs_main",
                 targets: &[Some(config.format.into())],
+                compilation_options: Default::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 cull_mode: Some(wgpu::Face::Back),
@@ -347,7 +350,6 @@ fn main() {
         let _ = window.request_inner_size(LogicalSize::new(1280.0, 720.0));
         window.set_title(&format!("imgui-wgpu {version}"));
         let size = window.inner_size();
-
 
         (window, size)
     };
@@ -446,9 +448,6 @@ fn main() {
 
     // Event loop
     let _ = event_loop.run(|event, elwt| {
-        if cfg!(feature = "metal-auto-capture") {
-            elwt.exit();
-        };
         match event {
             Event::WindowEvent {
                 event: WindowEvent::Resized(size),

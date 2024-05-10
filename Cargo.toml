@@ -1,7 +1,11 @@
 [package]
 name = "imgui-wgpu"
 version = "0.24.0"
-authors = ["Noah Hüsser <yatekii@yatekii.ch>", "Connor Fitzgerald <connorwadefitzgerald@gmail.com>", "Steven Wittens <steven@acko.net>"]
+authors = [
+	"Noah Hüsser <yatekii@yatekii.ch>",
+	"Connor Fitzgerald <connorwadefitzgerald@gmail.com>",
+	"Steven Wittens <steven@acko.net>",
+]
 edition = "2021"
 description = "A wgpu render backend for imgui-rs."
 documentation = "https://docs.rs/imgui-wgpu/"
@@ -12,11 +16,7 @@ categories = ["gui", "graphics", "rendering", "rendering::graphics-api"]
 keywords = ["gui", "graphics", "wgpu", "imgui"]
 license = "MIT OR Apache-2.0"
 
-exclude = [
-	".gitignore",
-	".github",
-	"resources",
-]
+exclude = [".gitignore", ".github", "resources"]
 
 [[package.metadata.release.pre-release-replacements]]
 file = "CHANGELOG.md"
@@ -34,29 +34,29 @@ replace = "## Unreleased\n\n## v{{version}}\n\nReleased {{date}}"
 file = "CHANGELOG.md"
 search = "\\[Unreleased\\]\\(https://github.com/Yatekii/imgui-wgpu-rs/compare/v([a-z0-9.-]+)\\.\\.\\.HEAD\\)"
 replace = "[Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v{{version}}...HEAD)\n- [v{{version}}](https://github.com/Yatekii/imgui-wgpu-rs/compare/v$1...v{{version}})"
-min = 0  # allow first increment
+min = 0                                                                                                                                                                               # allow first increment
 [[package.metadata.release.pre-release-replacements]]
 file = "CHANGELOG.md"
 search = "<!-- Begin Diffs -->"
 replace = "- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v{{version}}...HEAD)"
-min = 0  # allow non-first increment
+min = 0                                                                                          # allow non-first increment
 
 [dependencies]
 bytemuck = "1"
-imgui = { git = "https://github.com/imgui-rs/imgui-rs" }
+imgui = "0.12"
 log = "0.4"
 smallvec = "1"
-wgpu = "0.19"
+wgpu = "0.20"
 
 [dev-dependencies]
 bytemuck = { version = "1.13", features = ["derive"] }
 cgmath = "0.18"
-env_logger = "0.10"
-image = { version = "0.24", default-features = false, features = ["png"] }
-imgui-winit-support = { git = "https://github.com/imgui-rs/imgui-rs" }
+env_logger = "0.11.3"
+image = { version = "0.25.1", default-features = false, features = ["png"] }
+imgui-winit-support = "0.12"
 pollster = "0.3"
-raw-window-handle = "0.5"
-winit = "0.29"
+raw-window-handle = "0.6.1"
+winit = "0.29.3"
 
 [package.metadata.docs.rs]
 all-features = true

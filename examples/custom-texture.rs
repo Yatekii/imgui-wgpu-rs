@@ -6,7 +6,7 @@ use std::time::Instant;
 use wgpu::Extent3d;
 use winit::{
     dpi::LogicalSize,
-    event::{ElementState, Event, WindowEvent, KeyEvent},
+    event::{ElementState, Event, KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
     window::Window,
@@ -139,9 +139,6 @@ fn main() {
 
     // Event loop
     let _ = event_loop.run(|event, elwt| {
-        if cfg!(feature = "metal-auto-capture") {
-            elwt.exit();
-        };
         match event {
             Event::WindowEvent {
                 event: WindowEvent::Resized(size),
