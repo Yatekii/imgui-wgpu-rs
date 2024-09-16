@@ -37,7 +37,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 ## Unreleased
 
 - Internal: Fixed Scissor-Rect to not span across Framebuffersize, by limiting to framebuffer width. @PixelboysTM
-- Bump wgpu version to 0.18. @calcoph
+- Bump wgpu version to 0.19. @mkrasnitski and @calcoph
 
 ## v0.24.0
 
