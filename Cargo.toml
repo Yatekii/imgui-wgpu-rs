@@ -1,6 +1,6 @@
 [package]
 name = "imgui-wgpu"
-version = "0.24.0"
+version = "0.25.0"
 authors = ["Noah Hüsser <yatekii@yatekii.ch>", "Connor Fitzgerald <connorwadefitzgerald@gmail.com>", "Steven Wittens <steven@acko.net>"]
 edition = "2021"
 description = "A wgpu render backend for imgui-rs."
@@ -46,17 +46,17 @@ bytemuck = "1"
 imgui = "0.12"
 log = "0.4"
 smallvec = "1"
-wgpu = "0.19"
+wgpu = "22.1"
 
 [dev-dependencies]
 bytemuck = { version = "1.13", features = ["derive"] }
 cgmath = "0.18"
 env_logger = "0.10"
 image = { version = "0.24", default-features = false, features = ["png"] }
-imgui-winit-support = "0.12"
+imgui-winit-support = "0.13"
 pollster = "0.3"
 raw-window-handle = "0.5"
-winit = "0.29"
+winit = "0.30"
 
 [package.metadata.docs.rs]
 all-features = true
