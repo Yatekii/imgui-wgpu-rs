@@ -46,16 +46,16 @@ bytemuck = "1"
 imgui = "0.12"
 log = "0.4"
 smallvec = "1"
-wgpu = "22.1"
+wgpu = "23.0"
 
 [dev-dependencies]
 bytemuck = { version = "1.13", features = ["derive"] }
 cgmath = "0.18"
-env_logger = "0.10"
+env_logger = "0.11"
 image = { version = "0.24", default-features = false, features = ["png"] }
 imgui-winit-support = "0.13"
-pollster = "0.3"
-raw-window-handle = "0.5"
+pollster = "0.4"
+raw-window-handle = "0.6"
 winit = "0.30"
 
 [package.metadata.docs.rs]

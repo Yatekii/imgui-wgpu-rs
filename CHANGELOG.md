@@ -39,6 +39,8 @@ Per Keep a Changelog there are 6 main categories of changes:
 - Internal: Fixed Scissor-Rect to not span across Framebuffersize, by limiting to framebuffer width. @PixelboysTM
 - Bump wgpu version to 0.19. @mkrasnitski and @calcoph
 - Bump wgpu version to 22.1. @aftix
+- Bump wgpu version to 23.0. @SupernaviX
+- Internal: Update cargo-deny config to handle breaking changes. @SupernaviX
 
 ## v0.24.0
 
