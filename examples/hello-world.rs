@@ -39,7 +39,7 @@ struct App {
 
 impl AppWindow {
     fn setup_gpu(event_loop: &ActiveEventLoop) -> Self {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
             ..Default::default()
         });
