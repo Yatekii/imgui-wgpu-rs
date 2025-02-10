@@ -80,7 +80,7 @@ pub struct TextureConfig<'a> {
     pub sampler_desc: SamplerDescriptor<'a>,
 }
 
-impl<'a> Default for TextureConfig<'a> {
+impl Default for TextureConfig<'_> {
     /// Create a new texture config.
     fn default() -> Self {
         let sampler_desc = SamplerDescriptor {
