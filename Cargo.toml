@@ -46,7 +46,7 @@ bytemuck = "1"
 imgui = "0.12"
 log = "0.4"
 smallvec = "1"
-wgpu = "24.0.1"
+wgpu = "25.0.0"
 
 [dev-dependencies]
 bytemuck = { version = "1.13", features = ["derive"] }
