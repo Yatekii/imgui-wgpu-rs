@@ -390,7 +390,7 @@ impl AppWindow {
         .unwrap();
 
         let (device, queue) =
-            block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None)).unwrap();
+            block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).unwrap();
 
         // Set up swap chain
         let surface_desc = wgpu::SurfaceConfiguration {

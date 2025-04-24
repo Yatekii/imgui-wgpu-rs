@@ -47,13 +47,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --target ${{ matrix.target }} -- -D warnings
+          args: --target ${{ matrix.target }} --examples --tests -- -D warnings
 
       - name: build
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --target ${{ matrix.target }}
+          args: --examples --tests --target ${{ matrix.target }}
 
       - name: doc
         uses: actions-rs/cargo@v1
