@@ -198,7 +198,7 @@ impl Example {
         queue.write_texture(
             texture.as_image_copy(),
             &texels,
-            wgpu::ImageDataLayout {
+            wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(size),
                 rows_per_image: None,
@@ -599,7 +599,7 @@ impl ApplicationHandler for App {
                         );
                     }
 
-                    // Only render example to example_texture if thw window is not collapsed
+                    // Only render example to example_texture if the window is not collapsed
                     imgui.example.setup_camera(&window.queue, size);
                     imgui.example.render(
                         imgui
