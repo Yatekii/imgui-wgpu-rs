@@ -55,7 +55,7 @@ impl AppWindow {
 
             let attributes = Window::default_attributes()
                 .with_inner_size(size)
-                .with_title(&format!("imgui-wgpu {version}"));
+                .with_title(format!("imgui-wgpu {version}"));
             Arc::new(event_loop.create_window(attributes).unwrap())
         };
 
