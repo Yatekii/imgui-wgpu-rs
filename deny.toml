@@ -20,3 +20,9 @@ skip = [
 [sources]
 unknown-registry = "deny"
 unknown-git = "allow"
+
+[advisories]
+ignore = [
+    # paste is unmaintained, but is complete.
+    "RUSTSEC-2024-0436",
+]
