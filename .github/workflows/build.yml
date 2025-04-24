@@ -12,18 +12,18 @@ jobs:
       matrix:
         include:
           # native stable
-          - name: 'stable linux'
-            os: 'ubuntu-latest'
-            target: 'x86_64-unknown-linux-gnu'
-            rust_version: 'stable'
-          - name: 'stable mac'
-            os: 'macos-latest'
-            target: 'x86_64-apple-darwin'
-            rust_version: 'stable'
-          - name: 'stable windows'
-            os: 'windows-latest'
-            target: 'x86_64-pc-windows-msvc'
-            rust_version: 'stable'
+          - name: "stable linux"
+            os: "ubuntu-latest"
+            target: "x86_64-unknown-linux-gnu"
+            rust_version: "stable"
+          - name: "stable mac"
+            os: "macos-latest"
+            target: "x86_64-apple-darwin"
+            rust_version: "stable"
+          - name: "stable windows"
+            os: "windows-latest"
+            target: "x86_64-pc-windows-msvc"
+            rust_version: "stable"
       fail-fast: false
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
@@ -32,16 +32,7 @@ jobs:
       - name: checkout repo
         uses: actions/checkout@v2
 
-      - name: load cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.rust_version }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.rust_version }}-cargo-
+      - uses: Swatinem/rust-cache@v2
 
       - name: install rust
         uses: actions-rs/toolchain@v1
@@ -51,19 +42,19 @@ jobs:
           profile: minimal
           components: clippy
           default: true
-          
+
       - name: check
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --target ${{ matrix.target }} -- -D warnings 
-          
+          args: --target ${{ matrix.target }} -- -D warnings
+
       - name: build
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --target ${{ matrix.target }}
-          
+
       - name: doc
         uses: actions-rs/cargo@v1
         env:
@@ -107,8 +98,8 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    
-    needs: ['build', 'cargo-fmt', 'cargo-deny']
+
+    needs: ["build", "cargo-fmt", "cargo-deny"]
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
     steps:
@@ -123,7 +114,7 @@ jobs:
           toolchain: stable
           profile: minimal
           default: true
-      
+
       - name: install cargo-release
         run: |
           curl -LsSf https://github.com/crate-ci/cargo-release/releases/download/v0.21.0/cargo-release-v0.21.0-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ${CARGO_HOME:-~/.cargo}/bin
@@ -136,7 +127,7 @@ jobs:
 
           cargo login ${{ secrets.CRATES_TOKEN }}
           cargo release --no-confirm --execute $( echo '${{ github.ref }}' | sed 's?refs/tags/v??' )
-      
+
       - name: generate release notes
         id: notes
         run: |
