@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: load cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
