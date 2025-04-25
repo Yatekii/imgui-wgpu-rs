@@ -11,7 +11,7 @@
     "rebaseWhen": "conflicted",
     "branchTopic": "Cargo.lock update",
     "commitMessageAction": "Update Cargo.lock",
-    "schedule": ["at any time"],
+    "schedule": ["before 4am on monday"],
     "prBodyDefinitions": {
       "Change": "All locks refreshed"
     }
