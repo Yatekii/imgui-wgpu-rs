@@ -41,7 +41,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 - Bump wgpu version to 22.1. @aftix
 - Bump wgpu version to 23.0. @SupernaviX
 - Internal: Update cargo-deny config to handle breaking changes. @SupernaviX
-- Internal: Respect `ImDrawCmd` `idx_offset` in` render_draw_list` to correctly render modal overlays. @CrushedPixel
+- Respect `ImDrawCmd` `idx_offset` in` render_draw_list` to correctly render modal overlays. @CrushedPixel
 
 ## v0.24.0
 
