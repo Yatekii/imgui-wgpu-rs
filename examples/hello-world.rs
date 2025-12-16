@@ -263,6 +263,7 @@ impl ApplicationHandler for App {
                             load: wgpu::LoadOp::Clear(imgui.clear_color),
                             store: wgpu::StoreOp::Store,
                         },
+                        depth_slice: None,
                     })],
                     depth_stencil_attachment: None,
                     timestamp_writes: None,

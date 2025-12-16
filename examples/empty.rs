@@ -1,10 +1,8 @@
-use image::ImageFormat;
 use imgui::*;
-use imgui_wgpu::{Renderer, RendererConfig, Texture, TextureConfig};
+use imgui_wgpu::{Renderer, RendererConfig};
 use imgui_winit_support::WinitPlatform;
 use pollster::block_on;
 use std::{sync::Arc, time::Instant};
-use wgpu::Extent3d;
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
@@ -19,9 +17,6 @@ struct ImguiState {
     platform: WinitPlatform,
     renderer: Renderer,
     clear_color: wgpu::Color,
-    width: u32,
-    height: u32,
-    checker_texture_id: TextureId,
     last_frame: Instant,
     last_cursor: Option<MouseCursor>,
 }
@@ -136,42 +131,15 @@ impl AppWindow {
             ..Default::default()
         };
 
-        let mut renderer = Renderer::new(&mut context, &self.device, &self.queue, renderer_config);
-
+        let renderer = Renderer::new(&mut context, &self.device, &self.queue, renderer_config);
         let last_frame = Instant::now();
         let last_cursor = None;
-
-        let checker_bytes = include_bytes!("../resources/checker.png");
-        let image = image::load_from_memory_with_format(checker_bytes, ImageFormat::Png)
-            .expect("invalid image");
-        let image = image.to_rgba8();
-        let (width, height) = image.dimensions();
-        let raw_data = image.into_raw();
-
-        let texture_config = TextureConfig {
-            size: Extent3d {
-                width,
-                height,
-                ..Default::default()
-            },
-            label: Some("checker texture"),
-            format: Some(wgpu::TextureFormat::Rgba8Unorm),
-            ..Default::default()
-        };
-
-        let texture = Texture::new(&self.device, &renderer, texture_config);
-
-        texture.write(&self.queue, &raw_data, width, height);
-        let checker_texture_id = renderer.textures.insert(texture);
 
         self.imgui = Some(ImguiState {
             context,
             platform,
             renderer,
             clear_color,
-            width,
-            height,
-            checker_texture_id,
             last_frame,
             last_cursor,
         })
@@ -244,17 +212,8 @@ impl ApplicationHandler for App {
                     .expect("Failed to prepare frame");
                 let ui = imgui.context.frame();
 
-                {
-                    let size = [imgui.width as f32, imgui.height as f32];
-                    let window = ui.window("Hello world");
-                    window
-                        .size([400.0, 600.0], Condition::FirstUseEver)
-                        .build(|| {
-                            ui.text("Hello textures!");
-                            ui.text("Say hello to checker.png");
-                            Image::new(imgui.checker_texture_id, size).build(ui);
-                        });
-                }
+                // Deliberately do not submit anything such that the draw buffer is empty.
+                // The renderer should cope gracefully with this.
 
                 let mut encoder: wgpu::CommandEncoder = window
                     .device
@@ -297,6 +256,7 @@ impl ApplicationHandler for App {
                 drop(rpass);
 
                 window.queue.submit(Some(encoder.finish()));
+
                 frame.present();
             }
             _ => (),
