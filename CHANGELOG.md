@@ -43,6 +43,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 - Internal: Update cargo-deny config to handle breaking changes. @SupernaviX
 - Internal: Fix crash when draw list is empty. @jbrd
 - Respect `ImDrawCmd` `idx_offset` in` render_draw_list` to correctly render modal overlays. @CrushedPixel
+- Bump wgpu version to 28.0. @radeuoj
 
 ## v0.24.0
 
