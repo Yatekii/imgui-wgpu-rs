@@ -90,7 +90,7 @@ impl Default for TextureConfig<'_> {
             address_mode_w: AddressMode::ClampToEdge,
             mag_filter: FilterMode::Linear,
             min_filter: FilterMode::Linear,
-            mipmap_filter: FilterMode::Linear,
+            mipmap_filter: MipmapFilterMode::Linear,
             lod_min_clamp: 0.0,
             lod_max_clamp: 100.0,
             compare: None,
@@ -432,7 +432,7 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("imgui-wgpu pipeline layout"),
             bind_group_layouts: &[&uniform_layout, &texture_layout],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         // Create the render pipeline.
@@ -491,7 +491,7 @@ impl Renderer {
                     write_mask: ColorWrites::ALL,
                 })],
             }),
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         });
 
