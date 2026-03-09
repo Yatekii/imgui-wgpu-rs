@@ -112,16 +112,14 @@ Extract the release notes (the bullet points under the new version heading in
 `CHANGELOG.md`) and create a release:
 
 ```bash
-gh release create vX.Y.Z --title "vX.Y.Z" --notes "$(NOTES)"
+gh release create vX.Y.Z --title "vX.Y.Z" --notes "<paste release notes here>"
 ```
 
-Or interactively:
+Or use `--generate-notes` and then edit the release body to match the changelog:
 
 ```bash
 gh release create vX.Y.Z --title "vX.Y.Z" --generate-notes
 ```
-
-Then edit the release body to match the changelog entry.
 
 ### 8. Post-release
 
