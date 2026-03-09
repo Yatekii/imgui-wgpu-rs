@@ -16,6 +16,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 #### Table of Contents
 
 - [Unreleased](#unreleased)
+- [v0.25.0](#v0250)
 - [v0.24.0](#v0240)
 - [v0.22.0](#v0220)
 - [v0.21.0](#v0210)
@@ -36,13 +37,22 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+- Bump wgpu version to 27. @bonohub13
+- Fix crash when draw list is empty (#114). @jbrd
+- Respect `ImDrawCmd` `idx_offset` in `render_draw_list` to correctly render modal overlays. @CrushedPixel
+
+## v0.25.0
+
+Released 2025-04-24
+
 - Internal: Fixed Scissor-Rect to not span across Framebuffersize, by limiting to framebuffer width. @PixelboysTM
-- Bump wgpu version to 0.19. @mkrasnitski and @calcoph
+- Fix #99. @Calcoph
+- Bump wgpu version to 0.19. @mkrasnitski and @Calcoph
 - Bump wgpu version to 22.1. @aftix
 - Bump wgpu version to 23.0. @SupernaviX
 - Internal: Update cargo-deny config to handle breaking changes. @SupernaviX
-- Internal: Fix crash when draw list is empty. @jbrd
-- Respect `ImDrawCmd` `idx_offset` in` render_draw_list` to correctly render modal overlays. @CrushedPixel
+- Bump wgpu version to 24. @bonohub13
+- Bump wgpu version to 25.
 
 ## v0.24.0
 
@@ -210,7 +220,8 @@ Released 2020-11-21
 
 ## Diffs
 
-- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.24.0...HEAD)
+- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.25.0...HEAD)
+- [v0.25.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.24.0...v0.25.0)
 - [v0.24.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.22.0...v0.24.0)
 - [v0.22.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.21.0...v0.22.0)
 - [v0.21.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.20.0...v0.21.0)
