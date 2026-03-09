@@ -17,7 +17,7 @@ Add `imgui-wgpu` to your `Cargo.toml`:
 [dependencies]
 imgui-wgpu = "0.26"
 imgui = "0.12"
-wgpu = "27"
+wgpu = "28"
 ```
 
 ## Usage
@@ -76,6 +76,7 @@ cargo run --release --example cube
 
 | imgui-wgpu | wgpu   | imgui |
 |------------|--------|-------|
+| master     | 28     | 0.12  |
 | 0.26.0     | 27     | 0.12  |
 | 0.25.0     | 25     | 0.12  |
 | 0.24.0     | 0.17   | 0.11  |
