@@ -80,16 +80,16 @@ imgui = "I"
 wgpu = "W"
 ```
 
-**b) Update the version compatibility table.** Change the `master` row to the new
-version with the current `wgpu` and `imgui` dependency versions from `Cargo.toml`:
+**b) Update the version compatibility table.** Add a new row for the release version
+directly below the existing `master` row, with the current `wgpu` and `imgui` dependency
+versions from `Cargo.toml`. Keep the `master` row as-is at the top:
 
 ```
 | imgui-wgpu | wgpu   | imgui |
 |------------|--------|-------|
+| master     | W      | I     |
 | X.Y.Z      | W      | I     |
 ```
-
-If there are already unreleased changes on the branch, add a new `master` row above it.
 
 ### 5. Commit and tag
 

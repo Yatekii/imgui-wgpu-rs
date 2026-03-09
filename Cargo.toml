@@ -1,6 +1,6 @@
 [package]
 name = "imgui-wgpu"
-version = "0.26.0"
+version = "0.27.0"
 authors = [
 	"Noah Hüsser <yatekii@yatekii.ch>",
 	"Connor Fitzgerald <connorwadefitzgerald@gmail.com>",
