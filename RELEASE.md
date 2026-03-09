@@ -70,8 +70,18 @@ version = "X.Y.Z"
 
 ### 4. Update README.md
 
-Update the version compatibility table. Change the `master` row to the new version
-with the current `wgpu` and `imgui` dependency versions from `Cargo.toml`:
+**a) Update the dependency snippet** in the "Getting Started" section to match the
+new versions:
+
+```toml
+[dependencies]
+imgui-wgpu = "X.Y"
+imgui = "I"
+wgpu = "W"
+```
+
+**b) Update the version compatibility table.** Change the `master` row to the new
+version with the current `wgpu` and `imgui` dependency versions from `Cargo.toml`:
 
 ```
 | imgui-wgpu | wgpu   | imgui |

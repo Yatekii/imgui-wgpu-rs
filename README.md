@@ -1,30 +1,78 @@
-# dear imgui wgpu-rs renderer
+# imgui-wgpu
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Yatekii/imgui-wgpu-rs/build.yml?branch=master)
 [![Documentation](https://docs.rs/imgui-wgpu/badge.svg)](https://docs.rs/imgui-wgpu)
 [![Crates.io](https://img.shields.io/crates/v/imgui-wgpu)](https://crates.io/crates/imgui-wgpu)
 ![License](https://img.shields.io/crates/l/imgui-wgpu)
 
-Draw dear imgui UIs as a wgpu render pass. Based on [imgui-gfx-renderer](https://github.com/Gekkio/imgui-rs/tree/master/imgui-gfx-renderer) from [imgui-rs](https://github.com/Gekkio/imgui-rs).
+A [wgpu](https://crates.io/crates/wgpu) render backend for [dear imgui](https://crates.io/crates/imgui) (`imgui-rs`).
 
 ![screenshot](doc/img/screenshot.png)
 
-# Usage
+## Getting Started
 
-For usage, please have a look at the [example](examples/hello-world.rs).
+Add `imgui-wgpu` to your `Cargo.toml`:
 
-# Example
-
-Run the example with
+```toml
+[dependencies]
+imgui-wgpu = "0.26"
+imgui = "0.12"
+wgpu = "27"
 ```
+
+## Usage
+
+Create a `Renderer` during setup, then call `render()` each frame inside a wgpu render pass:
+
+```rust
+// Setup
+let mut imgui = imgui::Context::create();
+let renderer_config = imgui_wgpu::RendererConfig {
+    texture_format: surface_format, // must match your surface
+    ..imgui_wgpu::RendererConfig::new()
+};
+let mut renderer = imgui_wgpu::Renderer::new(&mut imgui, &device, &queue, renderer_config);
+
+// Per frame
+let draw_data = imgui_context.render();
+let mut rpass = encoder.begin_render_pass(/* ... */);
+renderer.render(draw_data, &queue, &device, &mut rpass).unwrap();
+```
+
+For more control over GPU buffer lifetime, use `prepare()` + `split_render()` instead of `render()`.
+
+### Color Space
+
+`RendererConfig::new()` (the default) outputs linear color for **sRGB framebuffers** (`Bgra8UnormSrgb`). Use `RendererConfig::new_srgb()` if rendering to a **linear framebuffer** (`Bgra8Unorm`).
+
+### Custom Textures
+
+```rust
+let texture = imgui_wgpu::Texture::new(&device, &renderer, TextureConfig {
+    size: wgpu::Extent3d { width: 64, height: 64, depth_or_array_layers: 1 },
+    ..Default::default()
+});
+texture.write(&queue, &pixel_data, 64, 64);
+let tex_id = renderer.textures.insert(texture);
+// Use tex_id with imgui::Image
+```
+
+## Examples
+
+```sh
 cargo run --release --example hello-world
+cargo run --release --example custom-texture
+cargo run --release --example cube
 ```
 
-# Status
+| Example | Description |
+|---------|-------------|
+| `hello-world` | Basic imgui window with winit integration |
+| `custom-texture` | Loading and displaying a custom image |
+| `cube` | 3D rendering with an imgui overlay |
+| `empty` | Minimal test for empty draw lists |
 
-Contributions are very welcome.
-
-# Version Compatibility
+## Version Compatibility
 
 | imgui-wgpu | wgpu   | imgui |
 |------------|--------|-------|
@@ -52,3 +100,11 @@ Contributions are very welcome.
 | 0.5.0      | 0.4    | 0.3   |
 | 0.4.0      | 0.4    | 0.2   |
 | 0.1.0      | 0.3    | 0.2   |
+
+## Contributing
+
+Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/Yatekii/imgui-wgpu-rs).
+
+## License
+
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT License](LICENSE-MIT) at your option.

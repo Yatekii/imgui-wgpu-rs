@@ -1,3 +1,61 @@
+//! # imgui-wgpu
+//!
+//! A [wgpu](https://crates.io/crates/wgpu) render backend for
+//! [imgui-rs](https://crates.io/crates/imgui).
+//!
+//! ## Quick Start
+//!
+//! ```rust,no_run
+//! # use imgui::Context;
+//! # use imgui_wgpu::{Renderer, RendererConfig};
+//! # fn example(device: &wgpu::Device, queue: &wgpu::Queue, surface_format: wgpu::TextureFormat) {
+//! // During setup:
+//! let mut imgui = Context::create();
+//! let renderer_config = RendererConfig {
+//!     texture_format: surface_format,
+//!     ..RendererConfig::new()
+//! };
+//! let mut renderer = Renderer::new(&mut imgui, &device, &queue, renderer_config);
+//!
+//! // Each frame:
+//! // let draw_data = imgui_context.render();
+//! // let mut rpass = encoder.begin_render_pass(&render_pass_desc);
+//! // renderer.render(draw_data, &queue, &device, &mut rpass).unwrap();
+//! # }
+//! ```
+//!
+//! ## Color Space
+//!
+//! The default [`RendererConfig::new`] outputs linear color, appropriate for sRGB
+//! framebuffers (e.g. `Bgra8UnormSrgb`). If you are rendering to a linear framebuffer
+//! (e.g. `Bgra8Unorm`), use [`RendererConfig::new_srgb`] instead.
+//!
+//! ## Custom Textures
+//!
+//! Create a [`Texture`], then insert it into [`Renderer::textures`] to get a
+//! [`imgui::TextureId`] for use with imgui image widgets:
+//!
+//! ```rust,no_run
+//! # use imgui_wgpu::{Renderer, Texture, TextureConfig};
+//! # fn example(device: &wgpu::Device, queue: &wgpu::Queue, renderer: &mut Renderer) {
+//! let config = TextureConfig {
+//!     size: wgpu::Extent3d { width: 64, height: 64, depth_or_array_layers: 1 },
+//!     ..Default::default()
+//! };
+//! # let pixel_data = vec![0u8; 64 * 64 * 4];
+//! let texture = Texture::new(&device, &renderer, config);
+//! texture.write(&queue, &pixel_data, 64, 64);
+//! let tex_id = renderer.textures.insert(texture);
+//! # }
+//! ```
+//!
+//! ## Split Rendering
+//!
+//! For more control over buffer lifetime, use [`Renderer::prepare`] and
+//! [`Renderer::split_render`] separately instead of [`Renderer::render`].
+//! This lets you reuse [`RenderData`] across frames and control when GPU
+//! buffers are created.
+
 use imgui::{
     Context, DrawCmd::Elements, DrawData, DrawIdx, DrawList, DrawVert, TextureId, Textures,
 };
@@ -13,6 +71,7 @@ static VS_ENTRY_POINT: &str = "vs_main";
 static FS_ENTRY_POINT_LINEAR: &str = "fs_main_linear";
 static FS_ENTRY_POINT_SRGB: &str = "fs_main_srgb";
 
+/// Result type for renderer operations.
 pub type RendererResult<T> = Result<T, RendererError>;
 
 #[repr(transparent)]
@@ -23,8 +82,11 @@ unsafe impl bytemuck::Zeroable for DrawVertPod {}
 
 unsafe impl bytemuck::Pod for DrawVertPod {}
 
+/// Errors that can occur during rendering.
 #[derive(Clone, Debug)]
 pub enum RendererError {
+    /// A draw command referenced a [`TextureId`] that is not present in
+    /// [`Renderer::textures`].
     BadTexture(TextureId),
 }
 
@@ -273,13 +335,22 @@ impl Texture {
     }
 }
 
-/// Configuration for the renderer.
+/// Configuration for the [`Renderer`].
+///
+/// Use [`RendererConfig::new`] for sRGB framebuffers, [`RendererConfig::new_srgb`]
+/// for linear framebuffers, or [`RendererConfig::with_shaders`] for custom shaders.
 pub struct RendererConfig<'s> {
+    /// The output texture format. Must match your render target (e.g. the surface format).
     pub texture_format: TextureFormat,
+    /// Optional depth format. Set this if your render pass uses a depth attachment.
     pub depth_format: Option<TextureFormat>,
+    /// MSAA sample count. Defaults to `1` (no MSAA). Must match your render pass.
     pub sample_count: u32,
+    /// Custom shader module. If `None`, the built-in imgui shaders are used.
     pub shader: Option<ShaderModuleDescriptor<'s>>,
+    /// Vertex shader entry point name. Only needed with custom shaders.
     pub vertex_shader_entry_point: Option<&'s str>,
+    /// Fragment shader entry point name. Only needed with custom shaders.
     pub fragment_shader_entry_point: Option<&'s str>,
 }
 
@@ -328,6 +399,12 @@ impl RendererConfig<'_> {
     }
 }
 
+/// Intermediate render state produced by [`Renderer::prepare`] and consumed by
+/// [`Renderer::split_render`].
+///
+/// Holds GPU buffers and draw-list metadata for a single frame. Can be reused
+/// across frames by passing the previous frame's `RenderData` back into
+/// [`Renderer::prepare`], which avoids reallocating buffers when capacity is sufficient.
 pub struct RenderData {
     fb_size: [f32; 2],
     last_size: [f32; 2],
@@ -340,11 +417,20 @@ pub struct RenderData {
     render: bool,
 }
 
+/// The main imgui-wgpu renderer.
+///
+/// Manages the wgpu render pipeline, GPU buffers, and texture storage needed to
+/// render imgui draw data. Create one with [`Renderer::new`], then call
+/// [`Renderer::render`] (or [`Renderer::prepare`] + [`Renderer::split_render`])
+/// each frame inside a wgpu render pass.
 pub struct Renderer {
     pipeline: RenderPipeline,
     uniform_buffer: Buffer,
     uniform_bind_group: BindGroup,
-    /// Textures of the font atlas and all images.
+    /// Texture storage for the font atlas and user-registered images.
+    ///
+    /// Insert custom [`Texture`]s here to get a [`TextureId`] for use with imgui
+    /// image widgets. The font atlas texture is inserted automatically.
     pub textures: Textures<Texture>,
     texture_layout: BindGroupLayout,
     render_data: Option<RenderData>,
