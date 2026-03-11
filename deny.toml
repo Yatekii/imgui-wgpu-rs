@@ -5,18 +5,15 @@ allow = [
     "ISC",
     "MIT",
     "Unicode-3.0",
-    "Unlicense",
     "Zlib",
 ]
 
 [bans]
 multiple-versions = "deny"
 skip = [
-    { name = "bitflags", version = "1.3.2" },
-    { name = "foldhash", version = "0.1.5" },
-    { name = "hashbrown", version = "0.15.5" },
-    { name = "thiserror", version = "1.0.69" },
-    { name = "thiserror-impl", version = "1.0.69" },
+    { name = "bitflags", version = "1.3.2", reason = "imgui depends on bitflags 1.x" },
+    { name = "foldhash", version = "0.1.5", reason = "transitive dependency version mismatch" },
+    { name = "hashbrown", version = "0.15.5", reason = "transitive dependency version mismatch" },
 ]
 
 [sources]

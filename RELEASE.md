@@ -13,11 +13,9 @@ This document describes how to publish a new release of `imgui-wgpu`.
 ### 1. Determine the new version
 
 Pick the new version number following cargo semver conventions. For this document,
-we'll use `X.Y.Z` as a placeholder (e.g. `0.26.0`).
+we'll use `X.Y.Z` as a placeholder (e.g. `0.28.0`).
 
 ### 2. Update CHANGELOG.md
-
-Make the following edits to `CHANGELOG.md`:
 
 **a) Add the new version to the Table of Contents:**
 
@@ -29,7 +27,7 @@ Add a new entry directly below it:
 ```
 - [vX.Y.Z](#vXYZ)
 ```
-(The anchor is the version with dots removed, e.g. `v0.26.0` -> `#v0260`)
+(The anchor is the version with dots removed, e.g. `v0.28.0` -> `#v0280`)
 
 **b) Add a version heading under Unreleased:**
 
@@ -94,10 +92,9 @@ versions from `Cargo.toml`. Keep the `master` row as-is at the top:
 ### 5. Commit and tag
 
 ```bash
-git add Cargo.toml CHANGELOG.md README.md
-git commit -m "Release vX.Y.Z"
-git tag vX.Y.Z
-git push origin master --tags
+jj commit -m "Release vX.Y.Z"
+jj tag create vX.Y.Z
+jj git push
 ```
 
 ### 6. Publish to crates.io
@@ -108,17 +105,10 @@ cargo publish
 
 ### 7. Create the GitHub release
 
-Extract the release notes (the bullet points under the new version heading in
-`CHANGELOG.md`) and create a release:
+Extract the release notes from `CHANGELOG.md` and create a release:
 
 ```bash
 gh release create vX.Y.Z --title "vX.Y.Z" --notes "<paste release notes here>"
-```
-
-Or use `--generate-notes` and then edit the release body to match the changelog:
-
-```bash
-gh release create vX.Y.Z --title "vX.Y.Z" --generate-notes
 ```
 
 ### 8. Post-release

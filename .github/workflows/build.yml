@@ -4,6 +4,12 @@ on:
   push:
   pull_request:
 
+env:
+  CI_RUST_VERSION: "1.94"
+  CI_RUST_MSRV: "1.92"
+  RUSTFLAGS: -Dwarnings
+  RUSTDOCFLAGS: -Dwarnings
+
 jobs:
   build:
     timeout-minutes: 10
@@ -14,16 +20,10 @@ jobs:
           # native stable
           - name: "stable linux"
             os: "ubuntu-latest"
-            target: "x86_64-unknown-linux-gnu"
-            rust_version: "stable"
           - name: "stable mac"
             os: "macos-latest"
-            target: "x86_64-apple-darwin"
-            rust_version: "stable"
           - name: "stable windows"
             os: "windows-latest"
-            target: "x86_64-pc-windows-msvc"
-            rust_version: "stable"
       fail-fast: false
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
@@ -32,36 +32,26 @@ jobs:
       - name: checkout repo
         uses: actions/checkout@v6
 
+      - uses: cwfitzgerald/repo-common/.github/actions/install-rust@trunk
+        with:
+          version: ${{ env.CI_RUST_VERSION }}
+          components: clippy
+
+      - uses: taiki-e/install-action@cargo-nextest
+
       - uses: Swatinem/rust-cache@v2
 
-      - name: install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust_version }}
-          target: ${{ matrix.target }}
-          profile: minimal
-          components: clippy
-          default: true
-
       - name: check
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --target ${{ matrix.target }} --examples --tests -- -D warnings
-
-      - name: build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --examples --tests --target ${{ matrix.target }}
+        run: cargo clippy --all-targets
 
       - name: doc
-        uses: actions-rs/cargo@v1
-        env:
-          RUSTDOCFLAGS: -D warnings
-        with:
-          command: doc
-          args: --no-deps --target ${{ matrix.target }}
+        run: cargo doc --no-deps
+
+      - name: test
+        run: cargo nextest run --no-tests=pass
+
+      - name: doctest
+        run: cargo test --doc
 
   cargo-fmt:
     runs-on: ubuntu-latest
@@ -69,19 +59,13 @@ jobs:
       - name: checkout repo
         uses: actions/checkout@v6
 
-      - name: install rust
-        uses: actions-rs/toolchain@v1
+      - uses: cwfitzgerald/repo-common/.github/actions/install-rust@trunk
         with:
-          toolchain: nightly
-          profile: minimal
+          version: ${{ env.CI_RUST_VERSION }}
           components: rustfmt
-          default: true
 
       - name: check format
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
+        run: cargo fmt --check
 
   cargo-deny:
     runs-on: ubuntu-latest
@@ -95,3 +79,24 @@ jobs:
           log-level: warn
           command: check
           arguments: --all-features
+
+  msrv:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: ""
+      RUSTDOCFLAGS: ""
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v6
+
+      - uses: cwfitzgerald/repo-common/.github/actions/install-rust@trunk
+        with:
+          version: ${{ env.CI_RUST_MSRV }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: check
+        run: cargo check
+
+      - name: check (no default features)
+        run: cargo check --no-default-features
