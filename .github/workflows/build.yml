@@ -42,7 +42,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: check
-        run: cargo clippy --all-targets
+        run: cargo clippy --all-features
 
       - name: doc
         run: cargo doc --no-deps
