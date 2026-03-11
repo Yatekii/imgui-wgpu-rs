@@ -103,6 +103,10 @@ cargo run --release --example cube
 | 0.4.0      | 0.4    | 0.2   |
 | 0.1.0      | 0.3    | 0.2   |
 
+## Minimum Supported Rust Version (MSRV)
+
+The MSRV of this crate is **1.92**. MSRV bumps are considered breaking changes.
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/Yatekii/imgui-wgpu-rs).
