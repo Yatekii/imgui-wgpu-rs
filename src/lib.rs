@@ -737,11 +737,11 @@ impl Renderer {
     /// Render the current imgui frame.  `Renderer::prepare` must be
     /// called first, and the output render data must be kept for the
     /// lifetime of the renderpass.
-    pub fn split_render<'r>(
-        &'r self,
+    pub fn split_render(
+        &self,
         draw_data: &DrawData,
-        render_data: &'r RenderData,
-        rpass: &mut RenderPass<'r>,
+        render_data: &RenderData,
+        rpass: &mut RenderPass,
     ) -> RendererResult<()> {
         if !render_data.render {
             return Ok(());
@@ -781,12 +781,12 @@ impl Renderer {
     }
 
     /// Render the current imgui frame.
-    pub fn render<'r>(
-        &'r mut self,
+    pub fn render(
+        &mut self,
         draw_data: &DrawData,
         queue: &Queue,
         device: &Device,
-        rpass: &mut RenderPass<'r>,
+        rpass: &mut RenderPass,
     ) -> RendererResult<()> {
         let render_data = self.render_data.take();
         self.render_data = Some(self.prepare(draw_data, render_data, queue, device));
@@ -794,9 +794,9 @@ impl Renderer {
     }
 
     /// Render a given `DrawList` from imgui onto a wgpu frame.
-    fn render_draw_list<'render>(
-        &'render self,
-        rpass: &mut RenderPass<'render>,
+    fn render_draw_list(
+        &self,
+        rpass: &mut RenderPass,
         draw_list: &DrawList,
         fb_size: [f32; 2],
         clip_off: [f32; 2],
