@@ -741,7 +741,7 @@ impl Renderer {
         &self,
         draw_data: &DrawData,
         render_data: &RenderData,
-        rpass: &mut RenderPass,
+        rpass: &mut RenderPass<'_>,
     ) -> RendererResult<()> {
         if !render_data.render {
             return Ok(());
@@ -786,7 +786,7 @@ impl Renderer {
         draw_data: &DrawData,
         queue: &Queue,
         device: &Device,
-        rpass: &mut RenderPass,
+        rpass: &mut RenderPass<'_>,
     ) -> RendererResult<()> {
         let render_data = self.render_data.take();
         self.render_data = Some(self.prepare(draw_data, render_data, queue, device));
@@ -796,7 +796,7 @@ impl Renderer {
     /// Render a given `DrawList` from imgui onto a wgpu frame.
     fn render_draw_list(
         &self,
-        rpass: &mut RenderPass,
+        rpass: &mut RenderPass<'_>,
         draw_list: &DrawList,
         fb_size: [f32; 2],
         clip_off: [f32; 2],
