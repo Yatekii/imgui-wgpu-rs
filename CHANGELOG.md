@@ -39,6 +39,8 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+- Removed unncessary lifetime bounds on `render` and `split_render` @jmaargh
+
 ## v0.27.0
 
 Released 2026-03-09
