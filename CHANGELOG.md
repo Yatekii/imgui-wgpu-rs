@@ -40,6 +40,8 @@ Per Keep a Changelog there are 6 main categories of changes:
 ## Unreleased
 
 - Removed unncessary lifetime bounds on `render` and `split_render` @jmaargh
+- Bump wgpu version to 29. @cwfitzgerald
+- Lower MSRV to 1.87 (matching wgpu 29). @cwfitzgerald
 
 ## v0.27.0
 

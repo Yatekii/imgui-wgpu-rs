@@ -38,9 +38,11 @@ struct App {
 
 impl AppWindow {
     fn setup_gpu(event_loop: &ActiveEventLoop) -> Self {
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
-            ..Default::default()
+            ..wgpu::InstanceDescriptor::new_with_display_handle(Box::new(
+                event_loop.owned_display_handle(),
+            ))
         });
 
         let window = {
@@ -200,9 +202,20 @@ impl ApplicationHandler for App {
                 imgui.last_frame = now;
 
                 let frame = match window.surface.get_current_texture() {
-                    Ok(frame) => frame,
-                    Err(e) => {
-                        eprintln!("dropped frame: {e:?}");
+                    wgpu::CurrentSurfaceTexture::Success(frame) => frame,
+                    // Suboptimal is fine to render with — likely an
+                    // upcoming resize will reconfigure the surface.
+                    wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
+                    wgpu::CurrentSurfaceTexture::Timeout
+                    | wgpu::CurrentSurfaceTexture::Occluded => return,
+                    wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
+                        window
+                            .surface
+                            .configure(&window.device, &window.surface_desc);
+                        return;
+                    }
+                    other => {
+                        eprintln!("get_current_texture error: {other:?}");
                         return;
                     }
                 };

@@ -517,7 +517,7 @@ impl Renderer {
         // Create the render pipeline layout.
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("imgui-wgpu pipeline layout"),
-            bind_group_layouts: &[&uniform_layout, &texture_layout],
+            bind_group_layouts: &[Some(&uniform_layout), Some(&texture_layout)],
             immediate_size: 0,
         });
 
@@ -547,8 +547,8 @@ impl Renderer {
             },
             depth_stencil: depth_format.map(|format| wgpu::DepthStencilState {
                 format,
-                depth_write_enabled: false,
-                depth_compare: wgpu::CompareFunction::Always,
+                depth_write_enabled: Some(false),
+                depth_compare: None,
                 stencil: wgpu::StencilState::default(),
                 bias: DepthBiasState::default(),
             }),
