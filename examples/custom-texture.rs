@@ -43,9 +43,11 @@ struct App {
 
 impl AppWindow {
     fn setup_gpu(event_loop: &ActiveEventLoop) -> Self {
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
-            ..Default::default()
+            ..wgpu::InstanceDescriptor::new_with_display_handle(Box::new(
+                event_loop.owned_display_handle(),
+            ))
         });
 
         let window = {
@@ -114,8 +116,6 @@ impl AppWindow {
 
         context.fonts().add_font(&[FontSource::DefaultFontData {
             config: Some(imgui::FontConfig {
-                oversample_h: 1,
-                pixel_snap_h: true,
                 size_pixels: font_size,
                 ..Default::default()
             }),
@@ -200,20 +200,32 @@ impl ApplicationHandler for App {
 
         match &event {
             WindowEvent::Resized(size) => {
-                window.surface_desc = wgpu::SurfaceConfiguration {
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                    width: size.width,
-                    height: size.height,
-                    present_mode: wgpu::PresentMode::Fifo,
-                    desired_maximum_frame_latency: 2,
-                    alpha_mode: wgpu::CompositeAlphaMode::Auto,
-                    view_formats: vec![wgpu::TextureFormat::Bgra8Unorm],
-                };
-
+                window.surface_desc.width = size.width;
+                window.surface_desc.height = size.height;
                 window
                     .surface
                     .configure(&window.device, &window.surface_desc);
+            }
+            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                window.hidpi_factor = *scale_factor;
+                let font_size = (13.0 * window.hidpi_factor) as f32;
+                imgui.context.fonts().clear();
+                imgui
+                    .context
+                    .fonts()
+                    .add_font(&[FontSource::DefaultFontData {
+                        config: Some(imgui::FontConfig {
+                            oversample_h: 1,
+                            pixel_snap_h: true,
+                            size_pixels: font_size,
+                            ..Default::default()
+                        }),
+                    }]);
+                imgui.renderer.reload_font_texture(
+                    &mut imgui.context,
+                    &window.device,
+                    &window.queue,
+                );
             }
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::KeyboardInput { event, .. } => {
@@ -232,9 +244,20 @@ impl ApplicationHandler for App {
                 imgui.last_frame = now;
 
                 let frame = match window.surface.get_current_texture() {
-                    Ok(frame) => frame,
-                    Err(e) => {
-                        eprintln!("dropped frame: {e:?}");
+                    wgpu::CurrentSurfaceTexture::Success(frame) => frame,
+                    // Suboptimal is fine to render with — likely an
+                    // upcoming resize will reconfigure the surface.
+                    wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
+                    wgpu::CurrentSurfaceTexture::Timeout
+                    | wgpu::CurrentSurfaceTexture::Occluded => return,
+                    wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
+                        window
+                            .surface
+                            .configure(&window.device, &window.surface_desc);
+                        return;
+                    }
+                    other => {
+                        eprintln!("get_current_texture error: {other:?}");
                         return;
                     }
                 };

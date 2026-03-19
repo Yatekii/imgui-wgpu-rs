@@ -17,7 +17,7 @@ Add `imgui-wgpu` to your `Cargo.toml`:
 [dependencies]
 imgui-wgpu = "0.27"
 imgui = "0.12"
-wgpu = "28"
+wgpu = "29"
 ```
 
 ## Usage
@@ -76,7 +76,7 @@ cargo run --release --example cube
 
 | imgui-wgpu | wgpu   | imgui |
 |------------|--------|-------|
-| master     | 28     | 0.12  |
+| master     | 29     | 0.12  |
 | 0.27.0     | 28     | 0.12  |
 | 0.26.0     | 27     | 0.12  |
 | 0.25.0     | 25     | 0.12  |
@@ -105,7 +105,7 @@ cargo run --release --example cube
 
 ## Minimum Supported Rust Version (MSRV)
 
-The MSRV of this crate is **1.92**. MSRV bumps are considered breaking changes.
+The MSRV of this crate is **1.87**. MSRV bumps are considered breaking changes.
 
 ## Contributing
 
