@@ -111,8 +111,6 @@ impl AppWindow {
 
         context.fonts().add_font(&[FontSource::DefaultFontData {
             config: Some(imgui::FontConfig {
-                oversample_h: 1,
-                pixel_snap_h: true,
                 size_pixels: font_size,
                 ..Default::default()
             }),
@@ -170,20 +168,32 @@ impl ApplicationHandler for App {
 
         match &event {
             WindowEvent::Resized(size) => {
-                window.surface_desc = wgpu::SurfaceConfiguration {
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                    width: size.width,
-                    height: size.height,
-                    present_mode: wgpu::PresentMode::Fifo,
-                    desired_maximum_frame_latency: 2,
-                    alpha_mode: wgpu::CompositeAlphaMode::Auto,
-                    view_formats: vec![wgpu::TextureFormat::Bgra8Unorm],
-                };
-
+                window.surface_desc.width = size.width;
+                window.surface_desc.height = size.height;
                 window
                     .surface
                     .configure(&window.device, &window.surface_desc);
+            }
+            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                window.hidpi_factor = *scale_factor;
+                let font_size = (13.0 * window.hidpi_factor) as f32;
+                imgui.context.fonts().clear();
+                imgui
+                    .context
+                    .fonts()
+                    .add_font(&[FontSource::DefaultFontData {
+                        config: Some(imgui::FontConfig {
+                            oversample_h: 1,
+                            pixel_snap_h: true,
+                            size_pixels: font_size,
+                            ..Default::default()
+                        }),
+                    }]);
+                imgui.renderer.reload_font_texture(
+                    &mut imgui.context,
+                    &window.device,
+                    &window.queue,
+                );
             }
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::KeyboardInput { event, .. } => {
