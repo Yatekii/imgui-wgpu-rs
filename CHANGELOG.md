@@ -42,6 +42,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 - Removed unncessary lifetime bounds on `render` and `split_render` @jmaargh
 - Bump wgpu version to 29. @cwfitzgerald
 - Lower MSRV to 1.87 (matching wgpu 29). @cwfitzgerald
+- Fixed crash when using non-RGBA8 texture formats (e.g. `Rgba16Float` for HDR). (#109)
 
 ## v0.27.0
 

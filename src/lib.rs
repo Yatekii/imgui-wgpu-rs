@@ -275,10 +275,15 @@ impl Texture {
 
     /// Write `data` to the texture.
     ///
-    /// - `data`: 32-bit RGBA bitmap data.
+    /// - `data`: Bitmap data matching the texture's format.
     /// - `width`: The width of the source bitmap (`data`) in pixels.
     /// - `height`: The height of the source bitmap (`data`) in pixels.
     pub fn write(&self, queue: &Queue, data: &[u8], width: u32, height: u32) {
+        let bytes_per_block = self
+            .texture
+            .format()
+            .block_copy_size(None)
+            .expect("Texture format must have a valid block copy size");
         queue.write_texture(
             // destination (sub)texture
             TexelCopyTextureInfo {
@@ -292,7 +297,7 @@ impl Texture {
             // layout of the source bitmap
             TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(width * 4),
+                bytes_per_row: Some(width * bytes_per_block),
                 rows_per_image: Some(height),
             },
             // size of the source bitmap
@@ -883,6 +888,7 @@ impl Renderer {
                 height: handle.height,
                 ..Default::default()
             },
+            format: Some(TextureFormat::Rgba8Unorm),
             ..Default::default()
         };
 
