@@ -16,6 +16,7 @@ Per Keep a Changelog there are 6 main categories of changes:
 #### Table of Contents
 
 - [Unreleased](#unreleased)
+- [v0.28.0](#v0280)
 - [v0.27.0](#v0270)
 - [v0.26.0](#v0260)
 - [v0.25.0](#v0250)
@@ -38,6 +39,10 @@ Per Keep a Changelog there are 6 main categories of changes:
 - [Diffs](#diffs)
 
 ## Unreleased
+
+## v0.28.0
+
+Released 2026-03-19
 
 - Removed unncessary lifetime bounds on `render` and `split_render` @jmaargh
 - Bump wgpu version to 29. @cwfitzgerald
@@ -238,7 +243,8 @@ Released 2020-11-21
 
 ## Diffs
 
-- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.27.0...HEAD)
+- [Unreleased](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.28.0...HEAD)
+- [v0.28.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.27.0...v0.28.0)
 - [v0.27.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.26.0...v0.27.0)
 - [v0.26.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.25.0...v0.26.0)
 - [v0.25.0](https://github.com/Yatekii/imgui-wgpu-rs/compare/v0.24.0...v0.25.0)
