@@ -14,6 +14,7 @@ skip = [
     { name = "bitflags", version = "1.3.2", reason = "imgui depends on bitflags 1.x" },
     { name = "foldhash", version = "0.1.5", reason = "transitive dependency version mismatch" },
     { name = "hashbrown", version = "0.15.5", reason = "transitive dependency version mismatch" },
+    { name = "jni-sys", version = "0.3.1", reason = "Using semver trick to depend on 0.4.1" },
 ]
 
 [sources]
