@@ -32,7 +32,7 @@ cgmath = "0.18"
 env_logger = "0.11"
 image = { version = "0.25", default-features = false, features = ["png"] }
 imgui-winit-support = "0.13"
-pollster = "0.4"
+pollster = "1.0"
 raw-window-handle = "0.6"
 winit = "0.30"
 
