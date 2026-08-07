@@ -535,11 +535,11 @@ impl Renderer {
                 module: &shader_module,
                 entry_point: vertex_shader_entry_point,
                 compilation_options: Default::default(),
-                buffers: &[VertexBufferLayout {
+                buffers: &[Some(VertexBufferLayout {
                     array_stride: size_of::<DrawVert>() as BufferAddress,
                     step_mode: VertexStepMode::Vertex,
                     attributes: &vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Unorm8x4],
-                }],
+                })],
             },
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,
