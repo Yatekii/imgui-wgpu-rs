@@ -16,6 +16,7 @@ skip = [
     { name = "hashbrown", version = "0.15.5", reason = "transitive dependency version mismatch" },
     { crate = "hashbrown@0.16", reason = "gpu-allocator and naga lag behind" },
     { name = "jni-sys", version = "0.3.1", reason = "Using semver trick to depend on 0.4.1" },
+    { crate = "syn@2", reason = "transitive dependencies have not migrated to syn 3" },
 ]
 
 [sources]
@@ -26,4 +27,6 @@ unknown-git = "allow"
 ignore = [
     # paste is unmaintained, but is complete.
     "RUSTSEC-2024-0436",
+    # ttf-parser is a transitive dependency of winit.
+    "RUSTSEC-2026-0192",
 ]
