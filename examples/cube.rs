@@ -14,9 +14,9 @@ use winit::{
     window::Window,
 };
 
-const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
+const OPENGL_TO_WGPU_MATRIX: glam::Mat4 = glam::Mat4::from_cols_array(&[
     1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 1.0,
-);
+]);
 
 // Example code modified from https://github.com/gfx-rs/wgpu-rs/tree/master/examples/cube
 #[repr(C)]
@@ -108,12 +108,17 @@ struct Example {
 }
 
 impl Example {
-    fn generate_matrix(aspect_ratio: f32) -> cgmath::Matrix4<f32> {
-        let mx_projection = cgmath::perspective(cgmath::Deg(45f32), aspect_ratio, 1.0, 10.0);
-        let mx_view = cgmath::Matrix4::look_at_rh(
-            cgmath::Point3::new(1.5f32, -5.0, 3.0),
-            cgmath::Point3::new(0f32, 0.0, 0.0),
-            cgmath::Vector3::unit_z(),
+    fn generate_matrix(aspect_ratio: f32) -> glam::Mat4 {
+        let mx_projection = glam::camera::rh::proj::opengl::perspective(
+            45.0f32.to_radians(),
+            aspect_ratio,
+            1.0,
+            10.0,
+        );
+        let mx_view = glam::camera::rh::view::look_at_mat4(
+            glam::Vec3::new(1.5, -5.0, 3.0),
+            glam::Vec3::ZERO,
+            glam::Vec3::Z,
         );
         let mx_correction = OPENGL_TO_WGPU_MATRIX;
         mx_correction * mx_projection * mx_view
@@ -208,10 +213,10 @@ impl Example {
 
         // Create other resources
         let mx_total = Self::generate_matrix(config.width as f32 / config.height as f32);
-        let mx_ref: &[f32; 16] = mx_total.as_ref();
+        let mx_array = mx_total.to_cols_array();
         let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Uniform Buffer"),
-            contents: bytemuck::cast_slice(mx_ref),
+            contents: bytemuck::cast_slice(&mx_array),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
@@ -233,7 +238,7 @@ impl Example {
 
         let shader = device.create_shader_module(include_wgsl!("../resources/cube.wgsl"));
 
-        let vertex_buffers = [wgpu::VertexBufferLayout {
+        let vertex_buffers = [Some(wgpu::VertexBufferLayout {
             array_stride: vertex_size as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
@@ -248,7 +253,7 @@ impl Example {
                     shader_location: 1,
                 },
             ],
-        }];
+        })];
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
@@ -293,8 +298,8 @@ impl Example {
 
     fn setup_camera(&mut self, queue: &wgpu::Queue, size: [f32; 2]) {
         let mx_total = Self::generate_matrix(size[0] / size[1]);
-        let mx_ref: &[f32; 16] = mx_total.as_ref();
-        queue.write_buffer(&self.uniform_buf, 0, bytemuck::cast_slice(mx_ref));
+        let mx_array = mx_total.to_cols_array();
+        queue.write_buffer(&self.uniform_buf, 0, bytemuck::cast_slice(&mx_array));
     }
 
     fn render(&mut self, view: &wgpu::TextureView, device: &wgpu::Device, queue: &wgpu::Queue) {
@@ -390,6 +395,7 @@ impl AppWindow {
             power_preference: wgpu::PowerPreference::HighPerformance,
             compatible_surface: Some(&surface),
             force_fallback_adapter: false,
+            apply_limit_buckets: false,
         }))
         .unwrap();
 
@@ -400,6 +406,7 @@ impl AppWindow {
         let surface_desc = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: wgpu::TextureFormat::Bgra8UnormSrgb,
+            color_space: wgpu::SurfaceColorSpace::Auto,
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
@@ -678,7 +685,7 @@ impl ApplicationHandler for App {
                 drop(rpass);
 
                 window.queue.submit(Some(encoder.finish()));
-                frame.present();
+                window.queue.present(frame);
             }
             _ => (),
         }

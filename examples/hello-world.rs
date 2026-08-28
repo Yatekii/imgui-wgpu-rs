@@ -65,6 +65,7 @@ impl AppWindow {
             power_preference: wgpu::PowerPreference::HighPerformance,
             compatible_surface: Some(&surface),
             force_fallback_adapter: false,
+            apply_limit_buckets: false,
         }))
         .unwrap();
 
@@ -75,6 +76,7 @@ impl AppWindow {
         let surface_desc = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: wgpu::TextureFormat::Bgra8UnormSrgb,
+            color_space: wgpu::SurfaceColorSpace::Auto,
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
@@ -308,7 +310,7 @@ impl ApplicationHandler for App {
 
                 window.queue.submit(Some(encoder.finish()));
 
-                frame.present();
+                window.queue.present(frame);
             }
             _ => (),
         }
