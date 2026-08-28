@@ -40,6 +40,8 @@ Per Keep a Changelog there are 6 main categories of changes:
 
 ## Unreleased
 
+- Bump wgpu version to 30. @wyvernbw
+
 ## v0.28.0
 
 Released 2026-03-19
