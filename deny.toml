@@ -23,8 +23,6 @@ unknown-git = "allow"
 
 [advisories]
 ignore = [
-    # paste is unmaintained, but is complete.
-    "RUSTSEC-2024-0436",
     # ttf-parser is a transitive dependency of winit.
     "RUSTSEC-2026-0192",
 ]
